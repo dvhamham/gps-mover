@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/container"
+    android:fitsSystemWindows="true">
+
+    <include
+        android:id="@+id/map_container"
+        layout="@layout/map_container"/>
+
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|center_vertical"
+        android:layout_marginEnd="16dp">
+
+        <!-- Expandable FAB Container -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <!-- Expandable FABs settin-->
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/settings_fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:src="@drawable/ic_settings"
+                app:backgroundTint="#8395a7"
+                app:tint="@android:color/white"
+                android:scaleX="0"
+                android:scaleY="0"
+                android:alpha="0"/>
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/add_fav_fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:src="@drawable/ic_add"
+                app:backgroundTint="#4DB6AC"
+                app:tint="@android:color/white"
+                android:scaleX="0"
+                android:scaleY="0"
+                android:alpha="0"/>
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/search_fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:src="@drawable/ic_baseline_search_24"
+                app:backgroundTint="#64B5F6"
+                app:tint="@android:color/white"
+                android:scaleX="0"
+                android:scaleY="0"
+                android:alpha="0"/>
+
+            <!-- Main Expandable FAB -->
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/expandable_fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:src="@drawable/ic_expand"
+                app:backgroundTint="#7986CB"
+                app:tint="@android:color/white"/>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"/>
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/star_fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:src="@drawable/ic_star"
+                app:backgroundTint="#A1887F"
+                app:tint="@android:color/white"/>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+        android:animateLayoutChanges="true"
+                android:src="@drawable/ic_play"
+                app:backgroundTint="#BA68C8"
+                app:tint="@android:color/white"/>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/stop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+        android:animateLayoutChanges="true"
+        android:src="@drawable/ic_stop"
+                android:visibility="gone"
+                app:backgroundTint="#E57373"
+                app:tint="@android:color/white"/>
+        </LinearLayout>
+    </FrameLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

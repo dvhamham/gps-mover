@@ -1,0 +1,17 @@
+# Android/IntelliJ
+.idea/
+*.iml
+.gradle/
+build/
+app/build/
+local.properties
+# Mac system files
+.DS_Store
+# Log files
+*.log
+# Keystore files
+*.jks
+*.keystore
+# Generated files
+captures/
+output.json 

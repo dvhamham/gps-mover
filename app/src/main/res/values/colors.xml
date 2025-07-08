@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#2196F3</color>
+    <color name="primary_dark">#1976D2</color>
+    <color name="primary_light">#BBDEFB</color>
+    <color name="accent">#FF3F80</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="toolbar_dark">#3C4043</color>
+    <color name="toolbar">@android:color/white</color>
+    <color name="search_box_background">#F5F5F5</color>
+    <color name="toolbar_overflow">@android:color/black</color>
+
+    <color name="primaryContainer">#E3F2FD</color>
+    <color name="onPrimary">#FFFFFF</color>
+    <color name="secondary">#03DAC6</color>
+    <color name="onSecondary">#000000</color>
+    <color name="secondaryContainer">#B2DFDB</color>
+    <color name="onSecondaryContainer">#000000</color>
+    <color name="tertiary">#FFB300</color>
+    <color name="onTertiary">#000000</color>
+    <color name="tertiaryContainer">#FFE082</color>
+    <color name="onTertiaryContainer">#000000</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="onSurface">#000000</color>
+    <color name="surfaceVariant">#F5F5F5</color>
+    <color name="onSurfaceVariant">#757575</color>
+    <color name="background">#FFFFFF</color>
+    <color name="onBackground">#000000</color>
+    <color name="error">#B00020</color>
+    <color name="onError">#FFFFFF</color>
+    <color name="errorContainer">#FCD8DF</color>
+    <color name="onErrorContainer">#370617</color>
+    <color name="dialog_background">#dfe6e9</color>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_map"
+        android:icon="@drawable/ic_map_type"
+        android:title="Map" />
+    <item
+        android:id="@+id/menu_favourites"
+        android:icon="@drawable/ic_baseline_search_24"
+        android:title="Favourites" />
+    <item
+        android:id="@+id/menu_settings"
+        android:icon="@drawable/ic_update"
+        android:title="Settings" />
+</menu> 

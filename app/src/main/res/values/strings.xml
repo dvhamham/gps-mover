@@ -1,0 +1,67 @@
+<resources>
+    <string name="app_name">GPS Mover</string>
+    <string name="title_activity_maps">MapsActivity</string>
+    <string name="xposed_desc">Set location</string>
+    <string name="search">Search</string>
+
+
+    <!-- Errors -->
+    <string name="error_xposed_module_missing">Xposed module is not enabled</string>
+    <string name="error_xposed_module_missing_desc">LSPosed module must be installed and active on your device. \nInstall it via Magisk manager. \nOnce installed, please reboot your device and restart the application to continue.</string>
+
+    <string name="error_missing_root">No root access</string>
+    <string name="error_missing_root_desc">Root access is necessary in order for this app to manage overlays and work properly.</string>
+
+    <string name="record_saved">Save</string>
+
+
+    <string name="address">United States</string>
+    <string name="add_favourite">Favourite</string>
+    <string name="Search">Search</string>
+    <string name="rename_favourite">Rename favourite</string>
+    <string name="add_fav_in_database">Add fav in database</string>
+    <string name="show_fav_list">Show fav list</string>
+    <string name="favourites">Favourites</string>
+    <string name="address_not_found">Address not found</string>
+
+
+    <!-- About -->
+
+    <string name="about">About</string>
+    <string name="about_tittle">GPS Mover</string>
+    <string name="about_info">A module which will set your location where you want without enable mock location.</string>
+
+    <!-- Update -->
+
+    <string name="download_manager_description">Downloading update…</string>
+    <string name="update_button">Update</string>
+    <string name="update_available">Update available</string>
+    <string name="bs_update_download_failed">Failed</string>
+
+
+    <string name="cant_save">Can\'t save</string>
+    <string name="location_set">Location set</string>
+    <string name="title">Location set notification</string>
+    <string name="des">Show notification when location will set</string>
+
+    <string name="dialog_button_ok">OK</string>
+
+    <string name="add_fav_dialog_title">Fav name</string>
+    <string name="dialog_button_add">Add</string>
+    <string name="location_unset">Location unset</string>
+    <string name="no_internet">No internet</string>
+    <string name="search_hint">"Coordinates (lat, lng)"</string>
+
+    <!-- SettingActivity -->
+
+    <string name="xposed">Xposed</string>
+    <string name="advance_hook">Hook system location</string>
+    <string name="settings">Settings</string>
+    <string name="settings_of_accuracy">Accuracy</string>
+    <string name="preference_category_general">General</string>
+    <string name="enter_valid_input">Enter valid number</string>
+    <string name="delete_favourite_item">Delete favourite</string>
+    <string name="title_activity_settings">Settings</string>
+
+
+</resources>
