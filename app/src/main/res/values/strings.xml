@@ -54,7 +54,7 @@
 
     <!-- SettingActivity -->
 
-    <string name="xposed">Xposed</string>
+    <string name="xposed">Location</string>
     <string name="advance_hook">Hook system location</string>
     <string name="settings">Settings</string>
     <string name="settings_of_accuracy">Accuracy</string>

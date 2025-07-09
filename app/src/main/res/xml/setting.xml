@@ -28,7 +28,7 @@
 
     <PreferenceCategory app:title="@string/xposed">
 
-        <CheckBoxPreference
+        <SwitchPreference
             android:title="@string/advance_hook"
             android:summary="Hook system for better Location set."
             android:key="isHookedSystem"
