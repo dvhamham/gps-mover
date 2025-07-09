@@ -29,8 +29,8 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_settings"
-                app:backgroundTint="?attr/colorPrimary"
-                app:tint="?attr/colorOnPrimary"
+                app:backgroundTint="@color/settings_purple"
+                app:tint="@color/onPrimary"
                 android:scaleX="0"
                 android:scaleY="0"
                 android:alpha="0"/>
@@ -54,8 +54,8 @@
                 android:layout_margin="4dp"
                 android:layout_marginTop="16dp"
                 android:src="@drawable/ic_baseline_search_24"
-                app:backgroundTint="?attr/colorTertiary"
-                app:tint="?attr/colorOnTertiary"
+                app:backgroundTint="@color/search_orange"
+                app:tint="@color/onPrimary"
                 android:scaleX="0"
                 android:scaleY="0"
                 android:alpha="0"/>
@@ -92,8 +92,8 @@
                 android:layout_margin="4dp"
                 android:animateLayoutChanges="true"
                 android:src="@drawable/ic_play"
-                app:backgroundTint="?attr/colorTertiaryContainer"
-                app:tint="?attr/colorOnTertiaryContainer"/>
+                app:backgroundTint="@color/start_yellow"
+                app:tint="@color/onPrimary"/>
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/stop"
@@ -103,8 +103,8 @@
                 android:animateLayoutChanges="true"
                 android:src="@drawable/ic_stop"
                 android:visibility="gone"
-                app:backgroundTint="?attr/colorError"
-                app:tint="?attr/colorOnError"/>
+                app:backgroundTint="@color/stop_orange"
+                app:tint="@color/onPrimary"/>
         </LinearLayout>
     </FrameLayout>
 

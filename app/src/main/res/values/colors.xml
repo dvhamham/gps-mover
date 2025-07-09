@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#2196F3</color>
+    <color name="primary">#40C4FF</color>
     <color name="primary_dark">#1976D2</color>
     <color name="primary_light">#BBDEFB</color>
     <color name="accent">#FF3F80</color>
@@ -12,7 +12,7 @@
     <color name="toolbar_overflow">@android:color/black</color>
 
     <color name="primaryContainer">#E3F2FD</color>
-    <color name="onPrimary">#FFFFFF</color>
+    <color name="onPrimary">#000000</color>
     <color name="secondary">#03DAC6</color>
     <color name="onSecondary">#000000</color>
     <color name="secondaryContainer">#B2DFDB</color>
@@ -27,9 +27,13 @@
     <color name="onSurfaceVariant">#757575</color>
     <color name="background">#FFFFFF</color>
     <color name="onBackground">#000000</color>
-    <color name="error">#B00020</color>
-    <color name="onError">#FFFFFF</color>
+    <color name="error">#FF5252</color>
+    <color name="onError">#000000</color>
     <color name="errorContainer">#FCD8DF</color>
     <color name="onErrorContainer">#370617</color>
     <color name="dialog_background">#dfe6e9</color>
+    <color name="settings_purple">#D6A2E8</color>
+    <color name="stop_orange">#FEA47F</color>
+    <color name="start_yellow">#eccc68</color>
+    <color name="search_orange">#ffbe76</color>
 </resources>
