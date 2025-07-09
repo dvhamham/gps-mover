@@ -58,7 +58,7 @@ object PrefManager   {
     get() = pref.getFloat(LONGITUDE, -74.0060F).toDouble()
 
     var isHookSystem : Boolean
-    get() = pref.getBoolean(HOOKED_SYSTEM, false)
+    get() = pref.getBoolean(HOOKED_SYSTEM, true)
     set(value) { pref.edit().putBoolean(HOOKED_SYSTEM,value).apply() }
 
     var isRandomPosition :Boolean
