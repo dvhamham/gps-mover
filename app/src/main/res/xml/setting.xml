@@ -30,7 +30,7 @@
 
         <CheckBoxPreference
             android:title="@string/advance_hook"
-            android:summary="Hook system for better Location set you must select system"
+            android:summary="Hook system for better Location set."
             android:key="isHookedSystem"
             android:icon="@drawable/ic_advance_hook"
             android:defaultValue="true"/>
@@ -45,7 +45,7 @@
 
         <SwitchPreference
             android:title="Random position"
-            android:summary="Location position will be random around set location"
+            android:summary="Random around set location"
             android:icon="@drawable/ic_random_position"
             android:key="random_position"/>
 

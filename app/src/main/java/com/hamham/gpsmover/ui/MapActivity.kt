@@ -336,7 +336,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
                 }else{
                     viewModel.storeFavorite(s, lat, lon)
                     viewModel.response.observe(this@MapActivity){
-                        if (it == (-1).toLong()) showToast("Can't save") else showToast("Save")
+                        if (it == (-1).toLong()) showToast("Can't save") // else showToast("Save") 
                     }
                 dialog.dismiss()
             }
@@ -351,10 +351,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         getAllUpdatedFavList()
         val favs = favListAdapter.currentList
         if (favs.isNullOrEmpty()) {
-            MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog)
-                .setTitle("Empty")
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
+            Toast.makeText(this, "No items in favourites", Toast.LENGTH_SHORT).show()
             return
         }
         alertDialog = MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog)
@@ -386,6 +383,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         }
         favListAdapter.onItemDelete = {
             viewModel.deleteFavourite(it)
+            // Close dialog 
+                if (favListAdapter.itemCount == 1) {
+                dialog.dismiss()
+            }
         }
         alertDialog.setView(view)
         dialog = alertDialog.create()
