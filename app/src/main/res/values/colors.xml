@@ -32,8 +32,15 @@
     <color name="errorContainer">#FCD8DF</color>
     <color name="onErrorContainer">#370617</color>
     <color name="dialog_background">#dfe6e9</color>
-    <color name="settings_purple">#C18DD3</color>
-    <color name="stop_orange">#E28B6F</color>
-    <color name="start_yellow">#cbb95c</color>
-    <color name="search_orange">#e6a95e</color>
+    <color name="dialog_light_background">#FFFFFF</color>
+    <color name="dialog_modern_primary">#079992</color>
+    <color name="dialog_modern_primary_dark">#033E3B</color>
+    <color name="search_primary">#6366F1</color>
+    <color name="search_primary_dark">#4F46E5</color>
+    <color name="favorite_primary">#EC4899</color>
+    <color name="favorite_primary_dark">#DB2777</color>
+    <color name="settings_purple">#C99DD9</color>
+    <color name="stop_orange">#e5957a</color>
+    <color name="start_yellow">#cec066</color>
+    <color name="search_orange">#e9b06a</color>
 </resources>

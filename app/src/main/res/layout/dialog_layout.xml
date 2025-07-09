@@ -3,10 +3,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="@color/dialog_light_background">
 
 
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/text_input_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
@@ -17,7 +19,7 @@
         app:boxBackgroundColor="?attr/colorSurface"
         app:boxStrokeColor="?attr/colorPrimary"
         app:hintEnabled="true"
-        android:hint="Item">
+        android:hint="">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/search_edittxt"
             android:layout_width="match_parent"

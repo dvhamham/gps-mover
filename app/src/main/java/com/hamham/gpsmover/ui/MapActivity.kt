@@ -282,8 +282,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         val view = layoutInflater.inflate(R.layout.dialog_layout, null)
         val editText = view.findViewById<EditText>(R.id.search_edittxt)
         val actionButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.dialog_action_button)
-        editText.hint = ""
+        val textInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.text_input_layout)
+        
+        editText.hint = "Search"
         actionButton.text = getString(R.string.search)
+        
+        // Set modern colors for search dialog
+        textInputLayout.setBoxStrokeColor(getColor(R.color.dialog_modern_primary))
+        actionButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.dialog_modern_primary)))
         val progressBar = ProgressDialog(this)
         progressBar.setMessage("Searching...")
         actionButton.setOnClickListener {
@@ -327,8 +333,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
             val view = layoutInflater.inflate(R.layout.dialog_layout,null)
             val editText = view.findViewById<EditText>(R.id.search_edittxt)
         val actionButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.dialog_action_button)
-        editText.hint = ""
+        val textInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.text_input_layout)
+        
+        editText.hint = "Item"
         actionButton.text = getString(R.string.dialog_button_add)
+        
+        // Set modern colors for favorite dialog
+        textInputLayout.setBoxStrokeColor(getColor(R.color.dialog_modern_primary))
+        actionButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.dialog_modern_primary)))
         actionButton.setOnClickListener {
                 val s = editText.text.toString()
                 if (!mMarker?.isVisible!!){
