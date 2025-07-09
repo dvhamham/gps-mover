@@ -282,7 +282,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         val view = layoutInflater.inflate(R.layout.dialog_layout, null)
         val editText = view.findViewById<EditText>(R.id.search_edittxt)
         val actionButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.dialog_action_button)
-        editText.hint = getString(R.string.search_hint)
+        editText.hint = ""
         actionButton.text = getString(R.string.search)
         val progressBar = ProgressDialog(this)
         progressBar.setMessage("Searching...")
@@ -327,7 +327,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
             val view = layoutInflater.inflate(R.layout.dialog_layout,null)
             val editText = view.findViewById<EditText>(R.id.search_edittxt)
         val actionButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.dialog_action_button)
-        editText.hint = getString(R.string.add_fav_dialog_title)
+        editText.hint = ""
         actionButton.text = getString(R.string.dialog_button_add)
         actionButton.setOnClickListener {
                 val s = editText.text.toString()

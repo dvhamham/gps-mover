@@ -6,14 +6,27 @@
     android:orientation="vertical">
 
 
-    <EditText
-        android:id="@+id/search_edittxt"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:layout_marginTop="20dp"
-        android:minHeight="70dp" />
+        style="@style/Widget.Material3.TextInputLayout.FilledBox.Dense"
+        app:boxBackgroundMode="filled"
+        app:boxBackgroundColor="?attr/colorSurface"
+        app:boxStrokeColor="?attr/colorPrimary"
+        app:hintEnabled="true"
+        android:hint="Item">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/search_edittxt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="70dp"
+            android:textColor="?attr/colorOnSurface"
+            android:hint=""
+            android:padding="16dp"/>
+    </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/dialog_action_button"
@@ -26,7 +39,10 @@
         android:text="Action"
         style="@style/Widget.Material3.Button"
         app:cornerRadius="4dp"
-        app:backgroundTint="@color/primary"/>
+        app:backgroundTint="?attr/colorPrimary"
+        app:strokeColor="?attr/colorPrimaryContainer"
+        app:iconTint="?attr/colorOnPrimary"
+        android:textColor="?attr/colorOnPrimary"/>
 
 </LinearLayout>
 
