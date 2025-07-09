@@ -73,7 +73,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_expand"
                 app:backgroundTint="?attr/colorPrimary"
-                app:tint="?attr/colorOnPrimary"
+                app:tint="@android:color/black"
                 app:shapeAppearanceOverlay="@style/FabRounded2dp"
                 app:elevation="0dp"
                 />

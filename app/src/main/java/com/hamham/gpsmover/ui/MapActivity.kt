@@ -349,11 +349,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
 
     private fun openFavouriteListDialog() {
         getAllUpdatedFavList()
-        val favs = favListAdapter.currentList
-        if (favs.isNullOrEmpty()) {
-            Toast.makeText(this, "No items in favourites", Toast.LENGTH_SHORT).show()
-            return
-        }
+
         alertDialog = MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog)
         val view = layoutInflater.inflate(R.layout.fav,null)
         val  rcv = view.findViewById<RecyclerView>(R.id.favorites_list)

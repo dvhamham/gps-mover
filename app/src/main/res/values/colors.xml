@@ -32,8 +32,8 @@
     <color name="errorContainer">#FCD8DF</color>
     <color name="onErrorContainer">#370617</color>
     <color name="dialog_background">#dfe6e9</color>
-    <color name="settings_purple">#D6A2E8</color>
-    <color name="stop_orange">#FEA47F</color>
-    <color name="start_yellow">#eccc68</color>
-    <color name="search_orange">#ffbe76</color>
+    <color name="settings_purple">#C18DD3</color>
+    <color name="stop_orange">#E28B6F</color>
+    <color name="start_yellow">#cbb95c</color>
+    <color name="search_orange">#e6a95e</color>
 </resources>
