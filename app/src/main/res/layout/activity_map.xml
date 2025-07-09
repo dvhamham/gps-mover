@@ -31,6 +31,8 @@
                 android:src="@drawable/ic_settings"
                 app:backgroundTint="@color/settings_purple"
                 app:tint="@color/onPrimary"
+                app:shapeAppearanceOverlay="@style/FabRounded2dp"
+                app:elevation="0dp"
                 android:scaleX="0"
                 android:scaleY="0"
                 android:alpha="0"/>
@@ -43,6 +45,8 @@
                 android:src="@drawable/ic_add"
                 app:backgroundTint="?attr/colorSecondary"
                 app:tint="?attr/colorOnSecondary"
+                app:shapeAppearanceOverlay="@style/FabRounded2dp"
+                app:elevation="0dp"
                 android:scaleX="0"
                 android:scaleY="0"
                 android:alpha="0"/>
@@ -56,6 +60,8 @@
                 android:src="@drawable/ic_baseline_search_24"
                 app:backgroundTint="@color/search_orange"
                 app:tint="@color/onPrimary"
+                app:shapeAppearanceOverlay="@style/FabRounded2dp"
+                app:elevation="0dp"
                 android:scaleX="0"
                 android:scaleY="0"
                 android:alpha="0"/>
@@ -68,6 +74,8 @@
                 android:src="@drawable/ic_expand"
                 app:backgroundTint="?attr/colorPrimary"
                 app:tint="?attr/colorOnPrimary"
+                app:shapeAppearanceOverlay="@style/FabRounded2dp"
+                app:elevation="0dp"
                 />
 
             <View
@@ -83,7 +91,9 @@
                 android:layout_marginTop="16dp"
                 android:src="@drawable/ic_star"
                 app:backgroundTint="?attr/colorSecondaryContainer"
-                app:tint="?attr/colorOnSecondaryContainer"/>
+                app:tint="?attr/colorOnSecondaryContainer"
+                app:shapeAppearanceOverlay="@style/FabRounded2dp"
+                app:elevation="0dp"/>
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/start"
@@ -93,7 +103,9 @@
                 android:animateLayoutChanges="true"
                 android:src="@drawable/ic_play"
                 app:backgroundTint="@color/start_yellow"
-                app:tint="@color/onPrimary"/>
+                app:tint="@color/onPrimary"
+                app:shapeAppearanceOverlay="@style/FabRounded2dp"
+                app:elevation="0dp"/>
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/stop"
@@ -104,7 +116,9 @@
                 android:src="@drawable/ic_stop"
                 android:visibility="gone"
                 app:backgroundTint="@color/stop_orange"
-                app:tint="@color/onPrimary"/>
+                app:tint="@color/onPrimary"
+                app:shapeAppearanceOverlay="@style/FabRounded2dp"
+                app:elevation="0dp"/>
         </LinearLayout>
     </FrameLayout>
 
