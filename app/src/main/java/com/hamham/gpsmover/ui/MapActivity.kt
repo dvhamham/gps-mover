@@ -349,6 +349,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
 
     private fun openFavouriteListDialog() {
         getAllUpdatedFavList()
+        val favs = favListAdapter.currentList
+        if (favs.isNullOrEmpty()) {
+            MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog)
+                .setTitle("Empty")
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
         alertDialog = MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog)
         val view = layoutInflater.inflate(R.layout.fav,null)
         val  rcv = view.findViewById<RecyclerView>(R.id.favorites_list)
