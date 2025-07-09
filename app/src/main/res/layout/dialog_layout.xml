@@ -12,7 +12,8 @@
         android:layout_marginEnd="16dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="96dp" />
+        android:layout_marginTop="20dp"
+        android:minHeight="70dp" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/dialog_action_button"
@@ -29,3 +30,4 @@
 
 </LinearLayout>
 
+   
