@@ -36,12 +36,12 @@
             android:defaultValue="true"/>
 
         <EditTextPreference
-            android:defaultValue="10"
+            android:defaultValue="5"
             android:digits="0123456789"
             android:key="accuracy_settings"
             android:title="@string/settings_of_accuracy"
             android:icon="@drawable/ic_accuracy"
-            android:summary="10 m."/>
+            android:summary="5 m."/>
 
         <SwitchPreference
             android:title="Random position"
