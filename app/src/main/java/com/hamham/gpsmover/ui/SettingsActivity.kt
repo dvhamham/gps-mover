@@ -13,6 +13,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.preference.EditTextPreference
+import androidx.preference.Preference
 import androidx.preference.PreferenceDataStore
 import androidx.preference.PreferenceFragmentCompat
 import com.hamham.gpsmover.R
@@ -49,6 +50,7 @@ class SettingsActivity : AppCompatActivity() {
         override fun getString(key: String?, defValue: String?): String? {
             return when (key) {
                 "accuracy_settings" -> PrefManager.accuracy
+                "random_position_range" -> PrefManager.randomPositionRange
                 "map_type" -> PrefManager.mapType.toString()
                 "darkTheme" -> PrefManager.darkTheme.toString()
                 else -> throw IllegalArgumentException("Invalid key $key")
@@ -58,6 +60,7 @@ class SettingsActivity : AppCompatActivity() {
         override fun putString(key: String?, value: String?) {
             return when (key) {
                 "accuracy_settings" -> PrefManager.accuracy = value
+                "random_position_range" -> PrefManager.randomPositionRange = value
                 "map_type" -> PrefManager.mapType = value!!.toInt()
                 "darkTheme" -> PrefManager.darkTheme = value!!.toInt()
                 else -> throw IllegalArgumentException("Invalid key $key")
@@ -127,6 +130,14 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
 
+            findPreference<Preference>("random_position_range")?.let {
+                it.summary = "${PrefManager.randomPositionRange} m."
+                it.setOnPreferenceClickListener { _ ->
+                    showRandomPositionDialog()
+                    true
+                }
+            }
+
             findPreference<SimpleMenuPreference>("darkTheme")?.setOnPreferenceChangeListener { _, newValue ->
                 val newMode = (newValue as String).toInt()
                 if (PrefManager.darkTheme != newMode) {
@@ -135,9 +146,55 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 true
             }
+        }
 
+        private fun showRandomPositionDialog() {
+            val dialogView = layoutInflater.inflate(R.layout.dialog_random_position, null)
+            val switchView = dialogView.findViewById<android.widget.Switch>(R.id.random_position_switch)
+            val editText = dialogView.findViewById<android.widget.EditText>(R.id.random_position_edit)
 
+            // Set current values
+            switchView.isChecked = PrefManager.isRandomPosition
+            val currentValue = PrefManager.randomPositionRange?.ifEmpty { "2" } ?: "2"
+            editText.setText(currentValue)
 
+            // Handle switch changes
+            switchView.setOnCheckedChangeListener { _, isChecked ->
+                PrefManager.isRandomPosition = isChecked
+            }
+
+            // Handle text input
+            editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            editText.keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789.,")
+            editText.addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    val newText = s?.toString()?.replace(",", ".")
+                    if (newText != s?.toString()) {
+                        editText.setText(newText)
+                        editText.setSelection(newText?.length ?: 0)
+                    }
+                }
+                override fun afterTextChanged(s: android.text.Editable?) {}
+            })
+
+            val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .setPositiveButton("OK") { _, _ ->
+                    try {
+                        val newValue = editText.text.toString()
+                        if (newValue.isNotEmpty()) {
+                            PrefManager.randomPositionRange = newValue
+                            findPreference<Preference>("random_position_range")?.summary = "$newValue m."
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(requireContext(), getString(R.string.enter_valid_input), Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .create()
+
+            dialog.show()
         }
 
         private fun getCommaReplacerTextWatcher(editText: EditText): TextWatcher {

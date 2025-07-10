@@ -43,6 +43,9 @@ import de.robv.android.xposed.XSharedPreferences
          false
      )
 
+     val randomPositionRange : String?
+     get() = pref().getString("random_position_range","2")
+
      val accuracy : String?
      get() = pref().getString("accuracy_settings","5")
 

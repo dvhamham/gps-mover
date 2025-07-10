@@ -24,6 +24,7 @@ object PrefManager   {
     private const val LONGITUDE = "longitude"
     private const val HOOKED_SYSTEM = "isHookedSystem"
     private const val RANDOM_POSITION = "random_position"
+    private const val RANDOM_POSITION_RANGE = "random_position_range"
     private const val ACCURACY_SETTING = "accuracy_settings"
     private const val MAP_TYPE = "map_type"
     private const val DARK_THEME = "dark_theme"
@@ -64,6 +65,10 @@ object PrefManager   {
     var isRandomPosition :Boolean
     get() = pref.getBoolean(RANDOM_POSITION, false)
     set(value) { pref.edit().putBoolean(RANDOM_POSITION, value).apply() }
+
+    var randomPositionRange : String?
+    get() = pref.getString(RANDOM_POSITION_RANGE,"2")
+    set(value) { pref.edit().putString(RANDOM_POSITION_RANGE,value).apply()}
 
     var accuracy : String?
     get() = pref.getString(ACCURACY_SETTING,"5")

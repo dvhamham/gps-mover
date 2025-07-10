@@ -43,11 +43,11 @@
             android:icon="@drawable/ic_accuracy"
             android:summary="5 m."/>
 
-        <SwitchPreference
+        <Preference
+            android:key="random_position_range"
             android:title="Random position"
-            android:summary="Random around set location"
             android:icon="@drawable/ic_random_position"
-            android:key="random_position"/>
+            android:summary="تفعيل أو تعطيل العشوائية وتحديد النطاق بالمتر" />
 
 
     </PreferenceCategory>
