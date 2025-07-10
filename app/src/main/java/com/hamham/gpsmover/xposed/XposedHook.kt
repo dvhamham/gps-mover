@@ -214,8 +214,8 @@ class XposedHook : IXposedHookLoadPackage {
     private fun updateLocation() {
         try {
             mLastUpdated = System.currentTimeMillis()
-            val x = (rand.nextInt(50) - 25).toDouble()
-            val y = (rand.nextInt(50) - 25).toDouble()
+            val x = (rand.nextInt(4) - 2).toDouble()
+            val y = (rand.nextInt(4) - 2).toDouble()
             val dlat = x / earth
             val dlng = y / (earth * cos(pi * settings.getLat / 180.0))
             newlat = if (settings.isRandomPosition) settings.getLat + (dlat * 180.0 / pi) else settings.getLat
