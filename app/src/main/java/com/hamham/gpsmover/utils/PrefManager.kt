@@ -66,7 +66,7 @@ object PrefManager   {
     set(value) { pref.edit().putBoolean(RANDOM_POSITION, value).apply() }
 
     var accuracy : String?
-    get() = pref.getString(ACCURACY_SETTING,"10")
+    get() = pref.getString(ACCURACY_SETTING,"5")
     set(value) { pref.edit().putString(ACCURACY_SETTING,value).apply()}
 
     var mapType : Int

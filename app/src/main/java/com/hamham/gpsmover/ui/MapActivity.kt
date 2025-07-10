@@ -8,6 +8,9 @@ import android.content.Intent
 import android.location.Address
 import android.location.Geocoder
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -82,27 +85,32 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
 
         // Add click listener for the star FAB to open favourites dialog
         findViewById<View>(R.id.star_fab).setOnClickListener {
+            performHapticFeedback()
             openFavouriteListDialog()
         }
 
         // Add click listener for expandable FAB
         findViewById<View>(R.id.expandable_fab).setOnClickListener {
+            performHapticFeedback()
             toggleExpandableFAB()
         }
 
         // Add click listeners for expandable FAB items
         findViewById<View>(R.id.settings_fab).setOnClickListener {
+            performHapticFeedback()
             val sheet = SettingsBottomSheet()
             sheet.show(supportFragmentManager, "SettingsBottomSheet")
             collapseExpandableFAB()
         }
 
         findViewById<View>(R.id.add_fav_fab).setOnClickListener {
+            performHapticFeedback()
             addFavouriteDialog()
             collapseExpandableFAB()
         }
 
         findViewById<View>(R.id.search_fab).setOnClickListener {
+            performHapticFeedback()
             searchDialog()
             collapseExpandableFAB()
         }
@@ -138,6 +146,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         }
 
         binding.start.setOnClickListener {
+            performHapticFeedback()
             viewModel.update(true, lat, lon)
             mLatLng.let {
                 mMarker?.position = it!!
@@ -154,6 +163,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
             }
         }
         binding.stop.setOnClickListener {
+            performHapticFeedback()
             mLatLng.let {
                 viewModel.update(false, it!!.latitude, it.longitude)
             }
@@ -617,6 +627,34 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
 
     private fun cancelNotification(){
         notificationsChannel.cancelAllNotifications(this)
+    }
+
+    /**
+     * Perform haptic feedback using the latest Android haptics API
+     * Optimized for Android 16 (API 34) and above
+     */
+    private fun performHapticFeedback() {
+        try {
+            Log.d("HapticFeedback", "Attempting haptic feedback")
+            
+            // Simple approach - use the basic vibrator service
+            @Suppress("DEPRECATION")
+            val vibrator = getSystemService(Vibrator::class.java)
+            
+            if (vibrator == null) {
+                Log.d("HapticFeedback", "Vibrator service is null")
+                return
+            }
+
+            // Simple vibration for all Android versions
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(1)
+            Log.d("HapticFeedback", "Simple vibration applied successfully")
+            
+        } catch (e: Exception) {
+            // Handle any exceptions gracefully
+            Log.e("HapticFeedback", "Haptic feedback error: ${e.message}", e)
+        }
     }
 
 
