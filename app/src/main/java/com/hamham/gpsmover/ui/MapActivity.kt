@@ -8,9 +8,6 @@ import android.content.Intent
 import android.location.Address
 import android.location.Geocoder
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -73,7 +70,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
     private lateinit var alertDialog: MaterialAlertDialogBuilder
     private lateinit var dialog: AlertDialog
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -85,59 +81,51 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
 
         // Add click listener for the star FAB to open favourites dialog
         findViewById<View>(R.id.star_fab).setOnClickListener {
-            performHapticFeedback()
             openFavouriteListDialog()
         }
 
         // Add click listener for expandable FAB
         findViewById<View>(R.id.expandable_fab).setOnClickListener {
-            performHapticFeedback()
             toggleExpandableFAB()
         }
 
         // Add click listeners for expandable FAB items
         findViewById<View>(R.id.settings_fab).setOnClickListener {
-            performHapticFeedback()
             val sheet = SettingsBottomSheet()
             sheet.show(supportFragmentManager, "SettingsBottomSheet")
             collapseExpandableFAB()
         }
 
         findViewById<View>(R.id.add_fav_fab).setOnClickListener {
-            performHapticFeedback()
             addFavouriteDialog()
             collapseExpandableFAB()
         }
 
         findViewById<View>(R.id.search_fab).setOnClickListener {
-            performHapticFeedback()
             searchDialog()
             collapseExpandableFAB()
         }
     }
-
 
     private fun initializeMap() {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         mapFragment?.getMapAsync(this)
     }
 
-    private fun isModuleEnable(){
-        viewModel.isXposed.observe(this){ isXposed ->
+    private fun isModuleEnable() {
+        viewModel.isXposed.observe(this) { isXposed ->
             xposedDialog?.dismiss()
             xposedDialog = null
-            if (!isXposed){
-                xposedDialog = MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog).run {
-                    setTitle(R.string.error_xposed_module_missing)
-                    setMessage(R.string.error_xposed_module_missing_desc)
-                    setCancelable(BuildConfig.DEBUG)
-                    show()
-                }
+            if (!isXposed) {
+                xposedDialog = MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.error_xposed_module_missing)
+                    .setMessage(R.string.error_xposed_module_missing_desc)
+                    .setCancelable(BuildConfig.DEBUG)
+                    .create()
+                xposedDialog?.show()
             }
         }
-
     }
-
 
     private fun setFloatActionButton() {
         if (viewModel.isStarted) {
@@ -146,7 +134,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         }
 
         binding.start.setOnClickListener {
-            performHapticFeedback()
             viewModel.update(true, lat, lon)
             mLatLng.let {
                 mMarker?.position = it!!
@@ -156,14 +143,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
             binding.stop.visibility = View.VISIBLE
             lifecycleScope.launch {
                 mLatLng?.getAddress(this@MapActivity)?.let { address ->
-                    address.collect{ value ->
+                    address.collect { value ->
                         showStartNotification(value)
                     }
                 }
             }
         }
         binding.stop.setOnClickListener {
-            performHapticFeedback()
             mLatLng.let {
                 viewModel.update(false, it!!.latitude, it.longitude)
             }
@@ -174,15 +160,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         }
     }
 
-
     @SuppressLint("MissingPermission")
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-        with(mMap){
+        with(mMap) {
             mapType = viewModel.mapType
             val zoom = 12.0f
             lat = viewModel.getLat
-            lon  = viewModel.getLng
+            lon = viewModel.getLng
             mLatLng = LatLng(lat, lon)
             mLatLng.let {
                 mMarker = addMarker(
@@ -193,8 +178,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
             }
             uiSettings.isZoomControlsEnabled = false
             if (checkSinglePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                mMap.isMyLocationEnabled = true;
-            }else {
+                mMap.isMyLocationEnabled = true
+            } else {
                 val permList = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
                 ActivityCompat.requestPermissions(
                     this@MapActivity,
@@ -202,9 +187,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
                     99
                 )
             }
-            setPadding(0,0,0,170)
+            setPadding(0, 0, 0, 170)
             setOnMapClickListener(this@MapActivity)
-            if (viewModel.isStarted){
+            if (viewModel.isStarted) {
                 mMarker?.let {
                     it.isVisible = true
                     it.showInfoWindow()
@@ -226,7 +211,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         }
     }
 
-
     private fun moveMapToNewLocation(moveNewLocation: Boolean) {
         if (moveNewLocation) {
             mLatLng = LatLng(lat, lon)
@@ -239,38 +223,36 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
                 }
             }
         }
-
     }
-
 
     override fun onResume() {
         super.onResume()
         viewModel.updateXposedState()
     }
 
-
-    private fun aboutDialog(){
-        alertDialog = MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog)
-        layoutInflater.inflate(R.layout.about,null).apply {
-            val  tittle = findViewById<TextView>(R.id.design_about_title)
-            val  version = findViewById<TextView>(R.id.design_about_version)
-            val  info = findViewById<TextView>(R.id.design_about_info)
-            tittle.text = getString(R.string.app_name)
-            version.text = BuildConfig.VERSION_NAME
-            info.text = getString(R.string.about_info)
-        }.run {
-            alertDialog.setView(this)
-            alertDialog.show()
-        }
+    private fun aboutDialog() {
+        val view = layoutInflater.inflate(R.layout.about, null)
+        val tittle = view.findViewById<TextView>(R.id.design_about_title)
+        val version = view.findViewById<TextView>(R.id.design_about_version)
+        val info = view.findViewById<TextView>(R.id.design_about_info)
+        tittle.text = getString(R.string.app_name)
+        version.text = BuildConfig.VERSION_NAME
+        info.text = getString(R.string.about_info)
+        
+        alertDialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.app_name)
+            .setView(view)
+        dialog = alertDialog.create()
+        dialog.show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.main_menu,menu)
+        menuInflater.inflate(R.menu.main_menu, menu)
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-       when(item.itemId){
+        when (item.itemId) {
             R.id.search -> searchDialog()
             R.id.add_fav -> addFavouriteDialog()
             R.id.get_favourite -> openFavouriteListDialog()
@@ -283,12 +265,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
             else -> super.onOptionsItemSelected(item)
         }
         return true
-
     }
 
-
     private fun searchDialog() {
-        alertDialog = MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog)
         val view = layoutInflater.inflate(R.layout.dialog_layout, null)
         val editText = view.findViewById<EditText>(R.id.search_edittxt)
         val actionButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.dialog_action_button)
@@ -333,15 +312,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
                 showToast(getString(R.string.no_internet))
             }
         }
-        alertDialog.setView(view)
+        
+        alertDialog = MaterialAlertDialogBuilder(this)
+            .setView(view)
         dialog = alertDialog.create()
         dialog.show()
     }
 
-    private fun addFavouriteDialog(){
-        alertDialog =  MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog)
-            val view = layoutInflater.inflate(R.layout.dialog_layout,null)
-            val editText = view.findViewById<EditText>(R.id.search_edittxt)
+    private fun addFavouriteDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_layout, null)
+        val editText = view.findViewById<EditText>(R.id.search_edittxt)
         val actionButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.dialog_action_button)
         val textInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.text_input_layout)
         
@@ -353,29 +333,29 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         textInputLayout.setBoxStrokeColor(getColor(R.color.dialog_modern_primary))
         actionButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.dialog_modern_primary)))
         actionButton.setOnClickListener {
-                val s = editText.text.toString()
-                if (!mMarker?.isVisible!!){
-                  showToast("Location not select")
-                }else{
-                    viewModel.storeFavorite(s, lat, lon)
-                    viewModel.response.observe(this@MapActivity){
-                        if (it == (-1).toLong()) showToast("Can't save") // else showToast("Save") 
-                    }
+            val s = editText.text.toString()
+            if (!mMarker?.isVisible!!) {
+                showToast("Location not select")
+            } else {
+                viewModel.storeFavorite(s, lat, lon)
+                viewModel.response.observe(this@MapActivity) {
+                    if (it == (-1).toLong()) showToast("Can't save") // else showToast("Save") 
+                }
                 dialog.dismiss()
             }
         }
-        alertDialog.setView(view)
+        
+        alertDialog = MaterialAlertDialogBuilder(this)
+            .setView(view)
         dialog = alertDialog.create()
         dialog.show()
     }
 
-
     private fun openFavouriteListDialog() {
         getAllUpdatedFavList()
 
-        alertDialog = MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog)
-        val view = layoutInflater.inflate(R.layout.fav,null)
-        val  rcv = view.findViewById<RecyclerView>(R.id.favorites_list)
+        val view = layoutInflater.inflate(R.layout.fav, null)
+        val rcv = view.findViewById<RecyclerView>(R.id.favorites_list)
         rcv.layoutManager = LinearLayoutManager(this)
         rcv.adapter = favListAdapter
         favListAdapter.onItemClick = {
@@ -403,19 +383,20 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         favListAdapter.onItemDelete = {
             viewModel.deleteFavourite(it)
             // Close dialog 
-                if (favListAdapter.itemCount == 1) {
+            if (favListAdapter.itemCount == 1) {
                 dialog.dismiss()
             }
         }
-        alertDialog.setView(view)
+        
+        alertDialog = MaterialAlertDialogBuilder(this)
+            .setView(view)
         dialog = alertDialog.create()
         dialog.show()
     }
 
-
-    private fun getAllUpdatedFavList(){
+    private fun getAllUpdatedFavList() {
         lifecycleScope.launch {
-            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.doGetUserDetails()
                 viewModel.allFavList.collect {
                     favListAdapter.submitList(it)
@@ -512,21 +493,24 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         isExpanded = false
     }
 
-
-    private fun updateDialog(){
-        alertDialog = MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog)
-        alertDialog.setTitle(R.string.update_available)
-        alertDialog.setMessage(update?.changelog)
-        alertDialog.setPositiveButton(getString(R.string.update_button)) { _, _ ->
-            MaterialAlertDialogBuilder(this, R.style.CustomAlertDialog).apply {
-                val view = layoutInflater.inflate(R.layout.update_dialog, null)
-                val progress = view.findViewById<LinearProgressIndicator>(R.id.update_download_progress)
-                val cancel = view.findViewById<AppCompatButton>(R.id.update_download_cancel)
-                setView(view)
+    private fun updateDialog() {
+        alertDialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.update_available)
+            .setMessage(update?.changelog)
+            .setPositiveButton(getString(R.string.update_button)) { _, _ ->
+                val updateView = layoutInflater.inflate(R.layout.update_dialog, null)
+                val progress = updateView.findViewById<LinearProgressIndicator>(R.id.update_download_progress)
+                val cancel = updateView.findViewById<AppCompatButton>(R.id.update_download_cancel)
+                
+                val updateProgressDialog = MaterialAlertDialogBuilder(this)
+                    .setView(updateView)
+                    .create()
+                
                 cancel.setOnClickListener {
                     viewModel.cancelDownload(this@MapActivity)
-                    dialog.dismiss()
+                    updateProgressDialog.dismiss()
                 }
+                
                 lifecycleScope.launch {
                     viewModel.downloadState.collect {
                         when (it) {
@@ -539,7 +523,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
                             is MainViewModel.State.Done -> {
                                 viewModel.openPackageInstaller(this@MapActivity, it.fileUri)
                                 viewModel.clearUpdate()
-                                dialog.dismiss()
+                                updateProgressDialog.dismiss()
                             }
 
                             is MainViewModel.State.Failed -> {
@@ -548,73 +532,65 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
                                     R.string.bs_update_download_failed,
                                     Toast.LENGTH_LONG
                                 ).show()
-                                dialog.dismiss()
-
+                                updateProgressDialog.dismiss()
                             }
                             else -> {}
                         }
                     }
                 }
+                
                 update?.let { it ->
                     viewModel.startDownload(this@MapActivity, it)
                 } ?: run {
-                    dialog.dismiss()
+                    updateProgressDialog.dismiss()
                 }
-            }.run {
-                dialog = create()
-                dialog.show()
+                
+                updateProgressDialog.show()
             }
-        }
+        
         dialog = alertDialog.create()
         dialog.show()
-
     }
 
-    private fun updateChecker(){
+    private fun updateChecker() {
         lifecycleScope.launchWhenResumed {
-            viewModel.update.collect{
-                if (it!= null){
+            viewModel.update.collect {
+                if (it != null) {
                     updateDialog()
                 }
             }
         }
     }
 
-
     private suspend fun getSearchAddress(address: String) = callbackFlow {
-        withContext(Dispatchers.IO){
+        withContext(Dispatchers.IO) {
             trySend(SearchProgress.Progress)
             val matcher: Matcher =
                 Pattern.compile("[-+]?\\d{1,3}([.]\\d+)?, *[-+]?\\d{1,3}([.]\\d+)?").matcher(address)
 
-            if (matcher.matches()){
+            if (matcher.matches()) {
                 delay(3000)
-                trySend(SearchProgress.Complete(matcher.group().split(",")[0].toDouble(),matcher.group().split(",")[1].toDouble()))
-            }else {
+                trySend(SearchProgress.Complete(matcher.group().split(",")[0].toDouble(), matcher.group().split(",")[1].toDouble()))
+            } else {
                 try {
-
-                    val list: List<Address>? = Geocoder(this@MapActivity).getFromLocationName(address,5)
+                    val list: List<Address>? = Geocoder(this@MapActivity).getFromLocationName(address, 5)
                     list?.let {
-                        if (it.size == 1){
-                            trySend(SearchProgress.Complete(list[0].latitude,list[1].longitude))
-                        }else {
+                        if (it.size == 1) {
+                            trySend(SearchProgress.Complete(list[0].latitude, list[1].longitude))
+                        } else {
                             trySend(SearchProgress.Fail(getString(R.string.address_not_found)))
                         }
                     }
-                } catch (io : IOException){
+                } catch (io: IOException) {
                     trySend(SearchProgress.Fail(getString(R.string.no_internet)))
                 }
             }
         }
-
         awaitClose { this.cancel() }
     }
 
-
-
-
-    private fun showStartNotification(address: String){
-        notificationsChannel.showNotification(this){
+    private fun showStartNotification(address: String) {
+        notificationsChannel.showNotification(this) {
             it.setSmallIcon(R.drawable.ic_stop)
             it.setContentTitle(getString(R.string.location_set))
             it.setContentText(address)
@@ -622,48 +598,15 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
             it.setCategory(Notification.CATEGORY_EVENT)
             it.priority = NotificationCompat.PRIORITY_HIGH
         }
-
     }
 
-
-    private fun cancelNotification(){
+    private fun cancelNotification() {
         notificationsChannel.cancelAllNotifications(this)
     }
-
-    /**
-     * Perform haptic feedback using the latest Android haptics API
-     * Optimized for Android 16 (API 34) and above
-     */
-    private fun performHapticFeedback() {
-        try {
-            Log.d("HapticFeedback", "Attempting haptic feedback")
-            
-            // Simple approach - use the basic vibrator service
-            @Suppress("DEPRECATION")
-            val vibrator = getSystemService(Vibrator::class.java)
-            
-            if (vibrator == null) {
-                Log.d("HapticFeedback", "Vibrator service is null")
-                return
-            }
-
-            // Simple vibration for all Android versions
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(1)
-            Log.d("HapticFeedback", "Simple vibration applied successfully")
-            
-        } catch (e: Exception) {
-            // Handle any exceptions gracefully
-            Log.e("HapticFeedback", "Haptic feedback error: ${e.message}", e)
-        }
-    }
-
-
 }
-
 
 sealed class SearchProgress {
     object Progress : SearchProgress()
-    data class Complete(val lat: Double , val lon : Double) : SearchProgress()
+    data class Complete(val lat: Double, val lon: Double) : SearchProgress()
     data class Fail(val error: String?) : SearchProgress()
 }
