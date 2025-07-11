@@ -3,8 +3,6 @@ package com.hamham.gpsmover
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
 import com.hamham.gpsmover.utils.PrefManager
-import com.startapp.sdk.adsbase.StartAppAd
-import com.startapp.sdk.adsbase.StartAppSDK
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
