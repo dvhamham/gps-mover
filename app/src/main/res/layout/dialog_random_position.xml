@@ -4,40 +4,19 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="0dp">
 
-    <!-- Switch Row -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="16dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Random position"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:gravity="start" />
-
-        <Switch
-            android:id="@+id/random_position_switch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="end" />
-    </LinearLayout>
-
-    <!-- Range Input with Material 3 Design like search field -->
+    <!-- Material 3 Input Field -->
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="0dp"
         style="@style/Widget.Material3.TextInputLayout.FilledBox.Dense"
         app:boxBackgroundMode="filled"
         app:boxBackgroundColor="?attr/colorSurface"
-        app:boxStrokeColor="?attr/colorPrimary"
+        app:boxStrokeColor="@color/dialog_modern_primary"
         app:hintEnabled="false">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -50,5 +29,39 @@
             android:padding="16dp"/>
 
     </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Switch and Save Button Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp">
+
+        <Switch
+            android:id="@+id/random_position_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"/>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dialog_save_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save"
+            style="@style/Widget.Material3.Button"
+            app:cornerRadius="4dp"
+            app:backgroundTint="@color/dialog_modern_primary"
+            app:strokeColor="?attr/colorPrimaryContainer"
+            app:iconTint="?attr/colorOnPrimary"
+            android:textColor="?attr/colorOnPrimary"/>
+    </LinearLayout>
 
 </LinearLayout> 
