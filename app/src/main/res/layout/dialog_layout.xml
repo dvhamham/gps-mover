@@ -6,7 +6,6 @@
     android:orientation="vertical"
     android:background="@color/dialog_light_background">
 
-
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/text_input_layout"
         android:layout_width="match_parent"
@@ -18,15 +17,13 @@
         app:boxBackgroundMode="filled"
         app:boxBackgroundColor="?attr/colorSurface"
         app:boxStrokeColor="?attr/colorPrimary"
-        app:hintEnabled="true"
-        android:hint="">
+        app:hintEnabled="false">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/search_edittxt"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="70dp"
             android:textColor="?attr/colorOnSurface"
-            android:hint=""
             android:padding="16dp"/>
     </com.google.android.material.textfield.TextInputLayout>
 

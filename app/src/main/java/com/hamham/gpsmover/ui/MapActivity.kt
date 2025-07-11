@@ -346,6 +346,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         val textInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.text_input_layout)
         
         editText.hint = "Item"
+        editText.inputType = android.text.InputType.TYPE_CLASS_TEXT
         actionButton.text = getString(R.string.dialog_button_add)
         
         // Set modern colors for favorite dialog
