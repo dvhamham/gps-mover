@@ -4,46 +4,22 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="0dp">
+    android:padding="24dp">
 
-    <!-- Material 3 Input Field -->
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginTop="0dp"
-        style="@style/Widget.Material3.TextInputLayout.FilledBox.Dense"
-        app:boxBackgroundMode="filled"
-        app:boxBackgroundColor="?attr/colorSurface"
-        app:boxStrokeColor="@color/dialog_modern_primary"
-        app:hintEnabled="false">
+        android:hint="Accuracy (meters)"
+        app:boxStrokeColor="?attr/colorPrimary"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/accuracy_edit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="70dp"
-            android:textColor="?attr/colorOnSurface"
-            android:padding="16dp"/>
+            android:inputType="number"
+            android:maxLength="10" />
 
     </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Save Button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/dialog_save_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:layout_marginTop="20dp"
-        android:layout_marginBottom="20dp"
-        android:layout_marginEnd="20dp"
-        android:text="Save"
-        style="@style/Widget.Material3.Button"
-        app:cornerRadius="4dp"
-        app:backgroundTint="@color/dialog_modern_primary"
-        app:strokeColor="?attr/colorPrimaryContainer"
-        app:iconTint="?attr/colorOnPrimary"
-        android:textColor="?attr/colorOnPrimary"/>
 
 </LinearLayout> 

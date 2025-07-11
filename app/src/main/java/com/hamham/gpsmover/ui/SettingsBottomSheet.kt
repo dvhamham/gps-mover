@@ -4,163 +4,191 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatDelegate
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import androidx.preference.PreferenceFragmentCompat
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.android.material.textfield.TextInputEditText
 import com.hamham.gpsmover.R
 import com.hamham.gpsmover.utils.PrefManager
-import androidx.preference.EditTextPreference
-import androidx.preference.PreferenceDataStore
-import androidx.appcompat.app.AppCompatDelegate
-import rikka.preference.SimpleMenuPreference
-import android.widget.FrameLayout
-import androidx.preference.Preference
 
 class SettingsBottomSheet : BottomSheetDialogFragment() {
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val fragment = SettingsPreferenceFragment()
-        childFragmentManager.beginTransaction()
-            .replace(android.R.id.content, fragment)
-            .commitNowAllowingStateLoss()
-        val frame = FrameLayout(requireContext())
-        frame.id = android.R.id.content
-        return frame
+        return inflater.inflate(R.layout.bottom_sheet_settings, container, false)
     }
 
-    class SettingsPreferenceFragment : PreferenceFragmentCompat() {
-        override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-            preferenceManager.preferenceDataStore = object : PreferenceDataStore() {
-                override fun getBoolean(key: String?, defValue: Boolean): Boolean {
-                    return when (key) {
-                        "isHookedSystem" -> PrefManager.isHookSystem
-                        "random_position" -> PrefManager.isRandomPosition
-                        else -> throw IllegalArgumentException("Invalid key $key")
-                    }
-                }
-                override fun putBoolean(key: String?, value: Boolean) {
-                    when (key) {
-                        "isHookedSystem" -> PrefManager.isHookSystem = value
-                        "random_position" -> PrefManager.isRandomPosition = value
-                        else -> throw IllegalArgumentException("Invalid key $key")
-                    }
-                }
-                override fun getString(key: String?, defValue: String?): String? {
-                    return when (key) {
-                        "accuracy_settings" -> PrefManager.accuracy
-                        "random_position_range" -> PrefManager.randomPositionRange
-                        "map_type" -> PrefManager.mapType.toString()
-                        "darkTheme" -> PrefManager.darkTheme.toString()
-                        else -> throw IllegalArgumentException("Invalid key $key")
-                    }
-                }
-                override fun putString(key: String?, value: String?) {
-                    when (key) {
-                        "accuracy_settings" -> PrefManager.accuracy = value
-                        "random_position_range" -> PrefManager.randomPositionRange = value
-                        "map_type" -> PrefManager.mapType = value!!.toInt()
-                        "darkTheme" -> PrefManager.darkTheme = value!!.toInt()
-                        else -> throw IllegalArgumentException("Invalid key $key")
-                    }
-                }
-            }
-            setPreferencesFromResource(R.xml.setting, rootKey)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupViews(view)
+        updateSummaries()
+    }
 
-            findPreference<EditTextPreference>("accuracy_settings")?.let {
-                it.summary = "${PrefManager.accuracy} m."
-                it.setOnBindEditTextListener { editText ->
-                    editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER
-                    editText.keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789.,")
-                    editText.addTextChangedListener(object : android.text.TextWatcher {
-                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                            val newText = s?.toString()?.replace(",", ".")
-                            if (newText != s?.toString()) {
-                                editText.setText(newText)
-                                editText.setSelection(newText?.length ?: 0)
-                            }
-                        }
-                        override fun afterTextChanged(s: android.text.Editable?) {}
-                    })
-                }
-                it.setOnPreferenceChangeListener { preference, newValue ->
-                    try {
-                        newValue as String?
-                        preference.summary = "$newValue  m."
-                    } catch (n: NumberFormatException) {
-                        n.printStackTrace()
-                        android.widget.Toast.makeText(requireContext(), getString(R.string.enter_valid_input), android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                    true
-                }
-            }
+    private fun setupViews(view: View) {
+        // Dark Theme
+        view.findViewById<MaterialButton>(R.id.dark_theme_button).setOnClickListener {
+            showDarkThemeDialog()
+        }
 
-            findPreference<Preference>("random_position_range")?.let {
-                it.summary = "${PrefManager.randomPositionRange} m."
-                it.setOnPreferenceClickListener { _ ->
-                    showRandomPositionDialog()
-                    true
-                }
+        // Map Type
+        view.findViewById<MaterialButton>(R.id.map_type_button).setOnClickListener {
+            showMapTypeDialog()
+        }
+
+        // Advanced Hook Switch
+        view.findViewById<SwitchMaterial>(R.id.advance_hook_switch).apply {
+            isChecked = PrefManager.isHookSystem
+            setOnCheckedChangeListener { _, isChecked ->
+                PrefManager.isHookSystem = isChecked
             }
-            findPreference<SimpleMenuPreference>("darkTheme")?.setOnPreferenceChangeListener { _, newValue ->
-                val newMode = (newValue as String).toInt()
+        }
+
+        // Accuracy Settings
+        view.findViewById<MaterialButton>(R.id.accuracy_button).setOnClickListener {
+            showAccuracyDialog()
+        }
+
+        // Random Position
+        view.findViewById<MaterialButton>(R.id.random_position_button).setOnClickListener {
+            showRandomPositionDialog()
+        }
+    }
+
+    private fun updateSummaries() {
+        view?.let { view ->
+            // Dark Theme Summary
+            val darkThemeSummary = when (PrefManager.darkTheme) {
+                AppCompatDelegate.MODE_NIGHT_NO -> getString(R.string.light)
+                AppCompatDelegate.MODE_NIGHT_YES -> getString(R.string.dark)
+                else -> getString(R.string.system)
+            }
+            view.findViewById<TextView>(R.id.dark_theme_summary).text = darkThemeSummary
+
+            // Map Type Summary
+            val mapTypeSummary = when (PrefManager.mapType) {
+                1 -> "Normal"
+                2 -> "Satellite"
+                3 -> "Terrain"
+                else -> "Normal"
+            }
+            view.findViewById<TextView>(R.id.map_type_summary).text = mapTypeSummary
+
+            // Accuracy Summary
+            view.findViewById<TextView>(R.id.accuracy_summary).text = "${PrefManager.accuracy} m."
+
+            // Random Position Summary
+            val randomSummary = if (PrefManager.isRandomPosition) {
+                "${PrefManager.randomPositionRange} m."
+            } else {
+                "Disabled"
+            }
+            view.findViewById<TextView>(R.id.random_position_summary).text = randomSummary
+        }
+    }
+
+    private fun showDarkThemeDialog() {
+        val themes = arrayOf(getString(R.string.system), getString(R.string.light), getString(R.string.dark))
+        val currentIndex = when (PrefManager.darkTheme) {
+            AppCompatDelegate.MODE_NIGHT_NO -> 1
+            AppCompatDelegate.MODE_NIGHT_YES -> 2
+            else -> 0
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.dark_theme))
+            .setSingleChoiceItems(themes, currentIndex) { dialog, which ->
+                val newMode = when (which) {
+                    0 -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                    1 -> AppCompatDelegate.MODE_NIGHT_NO
+                    2 -> AppCompatDelegate.MODE_NIGHT_YES
+                    else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                }
                 if (PrefManager.darkTheme != newMode) {
+                    PrefManager.darkTheme = newMode
                     AppCompatDelegate.setDefaultNightMode(newMode)
                     activity?.recreate()
                 }
-                true
+                updateSummaries()
+                dialog.dismiss()
             }
+            .show()
+    }
+
+    private fun showMapTypeDialog() {
+        val mapTypes = arrayOf("Normal", "Satellite", "Terrain")
+        val currentIndex = PrefManager.mapType - 1
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Map Type")
+            .setSingleChoiceItems(mapTypes, currentIndex) { dialog, which ->
+                PrefManager.mapType = which + 1
+                updateSummaries()
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showAccuracyDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_accuracy, null)
+        val editText = dialogView.findViewById<TextInputEditText>(R.id.accuracy_edit)
+        
+        editText.setText(PrefManager.accuracy)
+        editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.settings_of_accuracy))
+            .setView(dialogView)
+            .setPositiveButton("OK") { _, _ ->
+                val newValue = editText.text.toString()
+                if (newValue.isNotEmpty()) {
+                    PrefManager.accuracy = newValue
+                    updateSummaries()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showRandomPositionDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_random_position, null)
+        val switchView = dialogView.findViewById<SwitchMaterial>(R.id.random_position_switch)
+        val editText = dialogView.findViewById<TextInputEditText>(R.id.random_position_edit)
+
+        // Set current values
+        switchView.isChecked = PrefManager.isRandomPosition
+        val currentValue = PrefManager.randomPositionRange?.ifEmpty { "2" } ?: "2"
+        editText.setText(currentValue)
+
+        // Handle switch changes
+        switchView.setOnCheckedChangeListener { _, isChecked ->
+            PrefManager.isRandomPosition = isChecked
         }
 
-        private fun showRandomPositionDialog() {
-            val dialogView = layoutInflater.inflate(R.layout.dialog_random_position, null)
-            val switchView = dialogView.findViewById<android.widget.Switch>(R.id.random_position_switch)
-            val editText = dialogView.findViewById<android.widget.EditText>(R.id.random_position_edit)
+        // Handle text input
+        editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER
 
-            // Set current values
-            switchView.isChecked = PrefManager.isRandomPosition
-            val currentValue = PrefManager.randomPositionRange?.ifEmpty { "2" } ?: "2"
-            editText.setText(currentValue)
-
-            // Handle switch changes
-            switchView.setOnCheckedChangeListener { _, isChecked ->
-                PrefManager.isRandomPosition = isChecked
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Random Position")
+            .setView(dialogView)
+            .setPositiveButton("OK") { _, _ ->
+                try {
+                    val newValue = editText.text.toString()
+                    if (newValue.isNotEmpty()) {
+                        PrefManager.randomPositionRange = newValue
+                        updateSummaries()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), getString(R.string.enter_valid_input), Toast.LENGTH_SHORT).show()
+                }
             }
-
-            // Handle text input
-            editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            editText.keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789.,")
-            editText.addTextChangedListener(object : android.text.TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                    val newText = s?.toString()?.replace(",", ".")
-                    if (newText != s?.toString()) {
-                        editText.setText(newText)
-                        editText.setSelection(newText?.length ?: 0)
-                    }
-                }
-                override fun afterTextChanged(s: android.text.Editable?) {}
-            })
-
-            val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setView(dialogView)
-                .setPositiveButton("OK") { _, _ ->
-                    try {
-                        val newValue = editText.text.toString()
-                        if (newValue.isNotEmpty()) {
-                            PrefManager.randomPositionRange = newValue
-                            findPreference<Preference>("random_position_range")?.summary = "$newValue m."
-                        }
-                    } catch (e: Exception) {
-                        android.widget.Toast.makeText(requireContext(), getString(R.string.enter_valid_input), android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                }
-                .setNegativeButton("Cancel", null)
-                .create()
-
-            dialog.show()
-        }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 } 

@@ -62,6 +62,12 @@
     <string name="enter_valid_input">Enter valid number</string>
     <string name="delete_favourite_item">Delete favourite</string>
     <string name="title_activity_settings">Settings</string>
+    <string name="select">Select</string>
+    <string name="edit">Edit</string>
+    <string name="light">Light</string>
+    <string name="dark">Dark</string>
+    <string name="system">System</string>
+    <string name="dark_theme">Dark Theme</string>
 
 
 </resources>
