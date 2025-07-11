@@ -4,7 +4,6 @@ import android.app.Application
 import android.app.DownloadManager
 import android.content.Context
 import androidx.room.Room
-import com.hamham.gpsmover.module.util.ApplicationScope
 import com.hamham.gpsmover.utils.PrefManager
 import com.hamham.gpsmover.room.AppDatabase
 import com.hamham.gpsmover.room.FavouriteDao
@@ -67,7 +66,6 @@ object AppModule{
     fun provideSettingRepo() : PrefManager =
         PrefManager
 
-    @ApplicationScope
     @Provides
     @Singleton
     fun providesApplicationScope() = CoroutineScope(SupervisorJob())

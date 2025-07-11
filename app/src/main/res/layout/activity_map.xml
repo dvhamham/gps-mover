@@ -75,8 +75,7 @@
                 app:backgroundTint="?attr/colorPrimary"
                 app:tint="@android:color/black"
                 app:shapeAppearanceOverlay="@style/FabRounded2dp"
-                app:elevation="0dp"
-                />
+                app:elevation="0dp"/>
 
             <View
                 android:layout_width="1dp"
