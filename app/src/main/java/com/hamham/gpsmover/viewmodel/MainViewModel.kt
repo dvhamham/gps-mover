@@ -22,9 +22,9 @@ import com.hamham.gpsmover.BuildConfig
 import com.hamham.gpsmover.R
 import com.hamham.gpsmover.utils.ext.onIO
 import com.hamham.gpsmover.utils.ext.onMain
-import com.hamham.gpsmover.repository.FavouriteRepository
+import com.hamham.gpsmover.favorites.Favourite
+import com.hamham.gpsmover.favorites.FavouriteRepository
 import com.hamham.gpsmover.utils.PrefManager
-import com.hamham.gpsmover.room.Favourite
 import com.hamham.gpsmover.selfhook.XposedSelfHooks
 import com.hamham.gpsmover.update.UpdateChecker
 import dagger.hilt.android.lifecycle.HiltViewModel

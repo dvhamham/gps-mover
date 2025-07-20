@@ -1,7 +1,8 @@
 package com.hamham.gpsmover.repository
 
-import com.hamham.gpsmover.room.Favourite
-import com.hamham.gpsmover.room.FavouriteDao
+import com.hamham.gpsmover.favorites.Favourite
+import com.hamham.gpsmover.favorites.FavouriteDao
+import com.hamham.gpsmover.favorites.FavouriteRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking

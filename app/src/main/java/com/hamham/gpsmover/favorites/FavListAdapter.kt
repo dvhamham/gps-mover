@@ -1,4 +1,4 @@
-package com.hamham.gpsmover.adapter
+package com.hamham.gpsmover.favorites
 
 import android.util.Log
 import android.view.LayoutInflater
@@ -10,7 +10,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.hamham.gpsmover.R
-import com.hamham.gpsmover.room.Favourite
+import com.hamham.gpsmover.favorites.Favourite
 import androidx.core.content.ContextCompat
 import android.util.TypedValue
 

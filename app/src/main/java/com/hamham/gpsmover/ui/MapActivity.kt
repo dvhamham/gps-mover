@@ -33,7 +33,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.hamham.gpsmover.BuildConfig
 import com.hamham.gpsmover.R
-import com.hamham.gpsmover.adapter.FavListAdapter
+import com.hamham.gpsmover.favorites.FavListAdapter
+import com.hamham.gpsmover.favorites.Favourite
 import com.hamham.gpsmover.databinding.ActivityMapBinding
 import com.hamham.gpsmover.utils.FavoritesImportExport
 import com.hamham.gpsmover.utils.NotificationsChannel
@@ -975,8 +976,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
                     Log.d("ImportCloud", "Favorites list loaded: ${favList.size} items")
                     val gson = com.google.gson.Gson()
                     val json = gson.toJson(favList)
-                    val type = object : com.google.gson.reflect.TypeToken<List<com.hamham.gpsmover.room.Favourite>>() {}.type
-                    val favorites: List<com.hamham.gpsmover.room.Favourite> = gson.fromJson(json, type)
+                    val type = object : com.google.gson.reflect.TypeToken<List<com.hamham.gpsmover.favorites.Favourite>>() {}.type
+                    val favorites: List<com.hamham.gpsmover.favorites.Favourite> = gson.fromJson(json, type)
                     lifecycleScope.launch {
                         viewModel.replaceAllFavourites(favorites)
                         showFavoritesMessageBar("Favorites imported from cloud", SnackbarType.SUCCESS)
@@ -1021,7 +1022,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
                 showCustomSnackbar("Location not select", SnackbarType.ERROR)
             } else {
                 // استخدم insertFavourite مباشرة بدلاً من storeFavorite
-                val fav = com.hamham.gpsmover.room.Favourite(
+                val fav = com.hamham.gpsmover.favorites.Favourite(
                     id = System.currentTimeMillis(),
                     address = s,
                     lat = lat,

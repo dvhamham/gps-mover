@@ -2,8 +2,8 @@ package com.hamham.gpsmover.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.Observer
-import com.hamham.gpsmover.repository.FavouriteRepository
-import com.hamham.gpsmover.room.Favourite
+import com.hamham.gpsmover.favorites.Favourite
+import com.hamham.gpsmover.favorites.FavouriteRepository
 import com.hamham.gpsmover.selfhook.XposedSelfHooks
 import com.hamham.gpsmover.update.UpdateChecker
 import com.hamham.gpsmover.utils.PrefManager

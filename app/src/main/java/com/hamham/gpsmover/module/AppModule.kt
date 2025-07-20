@@ -5,8 +5,9 @@ import android.app.DownloadManager
 import android.content.Context
 import androidx.room.Room
 import com.hamham.gpsmover.utils.PrefManager
-import com.hamham.gpsmover.room.AppDatabase
-import com.hamham.gpsmover.room.FavouriteDao
+import com.hamham.gpsmover.favorites.Favourite
+import com.hamham.gpsmover.favorites.FavouriteDao
+import com.hamham.gpsmover.favorites.AppDatabase
 import com.hamham.gpsmover.update.GitHubService
 import dagger.Module
 import dagger.Provides
