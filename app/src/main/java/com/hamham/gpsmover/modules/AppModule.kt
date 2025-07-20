@@ -1,4 +1,4 @@
-package com.hamham.gpsmover.module
+package com.hamham.gpsmover.modules
 
 import android.app.Application
 import android.app.DownloadManager
