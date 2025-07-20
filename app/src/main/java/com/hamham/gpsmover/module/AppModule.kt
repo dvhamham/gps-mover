@@ -54,6 +54,7 @@ object AppModule{
         .allowMainThreadQueries()
         .addMigrations(AppDatabase.MIGRATION_1_2)
         .addCallback(callback)
+        .fallbackToDestructiveMigration()
         .build()
 
 
@@ -70,6 +71,11 @@ object AppModule{
     @Provides
     @Singleton
     fun providesApplicationScope() = CoroutineScope(SupervisorJob())
+
+    @Singleton
+    @Provides
+    fun provideFavouriteRepository(favouriteDao: FavouriteDao): com.hamham.gpsmover.favorites.FavouriteRepository =
+        com.hamham.gpsmover.favorites.FavouriteRepository(favouriteDao)
 
 }
 

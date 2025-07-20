@@ -33,7 +33,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.hamham.gpsmover.BuildConfig
 import com.hamham.gpsmover.R
-import com.hamham.gpsmover.favorites.FavListAdapter
+import com.hamham.gpsmover.favorites.FavoritesPage
 import com.hamham.gpsmover.favorites.Favourite
 import com.hamham.gpsmover.databinding.ActivityMapBinding
 import com.hamham.gpsmover.utils.FavoritesImportExport
@@ -69,6 +69,10 @@ import android.location.LocationManager
 import java.util.Locale
 import android.content.pm.PackageManager
 import androidx.appcompat.app.AlertDialog
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import android.widget.FrameLayout
+import android.view.ViewGroup
+import android.view.Gravity
 
 // Main activity for map, favorites, and update logic
 // Handles authentication, device ban, update checks, and main UI logic
@@ -81,7 +85,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
     private lateinit var mMap: GoogleMap
     val viewModel by viewModels<MainViewModel>()
     private val notificationsChannel by lazy { NotificationsChannel() }
-    private var favListAdapter: FavListAdapter = FavListAdapter()
+    private lateinit var favListAdapter: FavoritesPage.FavListAdapter
     private var mMarker: Marker? = null
     private var mLatLng: LatLng? = null
     private var lat by Delegates.notNull<Double>()
@@ -118,6 +122,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(binding.root)
+
+        favListAdapter = FavoritesPage(this).FavListAdapter()
 
         // --- Update and kill switch logic ---
         val versionCode = BuildConfig.VERSION_CODE
@@ -564,7 +570,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         val recyclerView = favoritesPage.findViewById<RecyclerView>(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = favListAdapter
-        val itemTouchHelper = FavListAdapter.createItemTouchHelper(favListAdapter)
+        val itemTouchHelper = com.hamham.gpsmover.favorites.createItemTouchHelper(favListAdapter)
         itemTouchHelper.attachToRecyclerView(recyclerView)
         favListAdapter.setItemTouchHelper(itemTouchHelper)
         Log.d("MapActivity", "ItemTouchHelper attached to RecyclerView")
@@ -606,7 +612,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
             viewModel.updateFavouritesOrder(updatedFavorites)
         }
         // تم حذف كود الشريط العلوي وأزرار القوائم المنسدلة بالكامل من هنا
-        getAllUpdatedFavList()
+        observeFavorites()
         isFavoritesPageInitialized = true
         Log.d("MapActivity", "Favorites page setup completed")
     }
@@ -1057,16 +1063,15 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
 
 
 
-    private fun getAllUpdatedFavList() {
+    // مراقبة التغييرات في المفضلة وتحديث الواجهة مباشرة من ViewModel
+    private fun observeFavorites() {
         val favoritesPage = findViewById<View>(R.id.favorites_page)
         val recyclerView = favoritesPage.findViewById<RecyclerView>(R.id.recyclerView)
         val emptyCard = favoritesPage.findViewById<View>(R.id.emptyCard)
         val emptyTitle = favoritesPage.findViewById<TextView>(R.id.emptyTitle)
         val emptyDescription = favoritesPage.findViewById<TextView>(R.id.emptyDescription)
-
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.doGetUserDetails()
                 viewModel.allFavList.collect { favorites ->
                     favListAdapter.setItems(favorites)
                     if (favorites.isEmpty()) {

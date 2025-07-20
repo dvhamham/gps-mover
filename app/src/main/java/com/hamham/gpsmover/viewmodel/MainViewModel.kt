@@ -39,6 +39,7 @@ import javax.inject.Inject
 import kotlin.math.roundToInt
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 
 
 @HiltViewModel
@@ -46,6 +47,7 @@ class MainViewModel @Inject constructor(
     private val prefManger: PrefManager,
     private val updateChecker: UpdateChecker,
     private val downloadManager: DownloadManager,
+    private val favouriteRepository: com.hamham.gpsmover.favorites.FavouriteRepository,
     @ApplicationContext context: Context
 ) : ViewModel() {
 
@@ -82,64 +84,42 @@ class MainViewModel @Inject constructor(
     }
 
 
-    private val _allFavList = MutableStateFlow<List<Favourite>>(emptyList())
-    val allFavList : StateFlow<List<Favourite>> =  _allFavList
+    val allFavList = favouriteRepository.getAllFavourites.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyList()
+    )
 
-    fun doGetUserDetails() {
-        onIO {
-            val user = FirebaseAuth.getInstance().currentUser
-            val email = user?.email ?: return@onIO
-            FirebaseFirestore.getInstance().collection("favorites").document(email).get()
-                .addOnSuccessListener { doc ->
-                    val favList = doc.get("list")
-                    if (favList is List<*>) {
-                        val gson = com.google.gson.Gson()
-                        val json = gson.toJson(favList)
-                        val type = object : com.google.gson.reflect.TypeToken<List<Favourite>>() {}.type
-                        val favorites: List<Favourite> = gson.fromJson(json, type)
-                        viewModelScope.launch { _allFavList.emit(favorites) }
-                    } else {
-                        viewModelScope.launch { _allFavList.emit(emptyList()) }
-                    }
-                }
-        }
-    }
+    // لم تعد هناك حاجة لدالة doGetUserDetails لأن التزامن أصبح لحظياً مع Room
 
-    fun saveFavoritesToFirestore(favorites: List<Favourite>) {
-        onIO {
-            val user = FirebaseAuth.getInstance().currentUser
-            val email = user?.email ?: return@onIO
-            FirebaseFirestore.getInstance().collection("favorites").document(email)
-                .set(mapOf("list" to favorites))
-        }
-    }
+    // إذا أردت مزامنة مع Firestore أضف دوال منفصلة لذلك عند الحاجة فقط
 
     fun insertFavourite(favourite: Favourite) {
         viewModelScope.launch {
-            val current = _allFavList.value.toMutableList()
-            current.add(favourite)
-            saveFavoritesToFirestore(current)
-            _allFavList.emit(current)
+            favouriteRepository.addNewFavourite(favourite)
+            syncFavoritesToFirestore()
         }
     }
 
     fun deleteFavourite(favourite: Favourite) {
         viewModelScope.launch {
-            val current = _allFavList.value.toMutableList()
-            current.removeAll { it.id == favourite.id }
-            saveFavoritesToFirestore(current)
-            _allFavList.emit(current)
+            favouriteRepository.deleteFavourite(favourite)
+            syncFavoritesToFirestore()
         }
     }
 
     fun updateFavouritesOrder(favourites: List<Favourite>) {
-        saveFavoritesToFirestore(favourites)
-        viewModelScope.launch { _allFavList.emit(favourites) }
+        viewModelScope.launch {
+            favouriteRepository.updateFavouritesOrder(favourites)
+            syncFavoritesToFirestore()
+        }
     }
 
     fun replaceAllFavourites(favorites: List<Favourite>) {
-        saveFavoritesToFirestore(favorites)
-        viewModelScope.launch { _allFavList.emit(favorites) }
+        viewModelScope.launch {
+            favouriteRepository.replaceAllFavourites(favorites)
+            syncFavoritesToFirestore()
+        }
     }
 
 
@@ -333,5 +313,95 @@ class MainViewModel @Inject constructor(
         object Failed: State()
     }
 
+    /**
+     * دالة لترحيل المفضلات من Firestore إلى قاعدة البيانات المحلية Room (مرة واحدة فقط)
+     * استدعها عند الحاجة لترحيل المفضلات القديمة.
+     */
+    fun migrateFavoritesFromFirestoreToRoom() {
+        viewModelScope.launch {
+            val user = FirebaseAuth.getInstance().currentUser
+            val email = user?.email ?: return@launch
+            FirebaseFirestore.getInstance().collection("favorites").document(email).get()
+                .addOnSuccessListener { doc ->
+                    val favList = doc.get("list")
+                    if (favList is List<*>) {
+                        val gson = com.google.gson.Gson()
+                        val json = gson.toJson(favList)
+                        val type = object : com.google.gson.reflect.TypeToken<List<Favourite>>() {}.type
+                        val favorites: List<Favourite> = gson.fromJson(json, type)
+                        viewModelScope.launch {
+                            favouriteRepository.insertAllFavourites(favorites)
+                        }
+                    }
+                }
+        }
+    }
+
+    /**
+     * مزامنة كل المفضلات من Room إلى Firestore
+     */
+    private fun syncFavoritesToFirestore() {
+        viewModelScope.launch {
+            val user = FirebaseAuth.getInstance().currentUser
+            val email = user?.email ?: return@launch
+            // اجلب كل المفضلات من Room
+            val favorites = favouriteRepository.getAllFavourites.first()
+            FirebaseFirestore.getInstance().collection("favorites").document(email)
+                .set(mapOf("list" to favorites))
+        }
+    }
+
+    /**
+     * مزامنة المفضلات من Firestore إلى Room (عند فتح التطبيق أو عند الطلب)
+     */
+    fun syncFavoritesFromFirestore() {
+        viewModelScope.launch {
+            val user = FirebaseAuth.getInstance().currentUser
+            val email = user?.email ?: return@launch
+            FirebaseFirestore.getInstance().collection("favorites").document(email).get()
+                .addOnSuccessListener { doc ->
+                    val favList = doc.get("list")
+                    if (favList is List<*>) {
+                        val gson = com.google.gson.Gson()
+                        val json = gson.toJson(favList)
+                        val type = object : com.google.gson.reflect.TypeToken<List<Favourite>>() {}.type
+                        val favorites: List<Favourite> = gson.fromJson(json, type)
+                        viewModelScope.launch {
+                            favouriteRepository.replaceAllFavourites(favorites)
+                        }
+                    }
+                }
+        }
+    }
+
+    /**
+     * تفعيل مزامنة لحظية (real-time) مع Firestore: أي تغيير في السحابة يحدث مباشرة في التطبيق
+     */
+    private var firestoreListener: ListenerRegistration? = null
+    private fun startRealtimeFavoritesSync() {
+        val user = FirebaseAuth.getInstance().currentUser ?: return
+        val email = user.email ?: return
+        firestoreListener?.remove() // أزل أي Listener سابق
+        firestoreListener = FirebaseFirestore.getInstance()
+            .collection("favorites")
+            .document(email)
+            .addSnapshotListener { doc, error ->
+                if (error != null || doc == null || !doc.exists()) return@addSnapshotListener
+                val favList = doc.get("list")
+                if (favList is List<*>) {
+                    val gson = com.google.gson.Gson()
+                    val json = gson.toJson(favList)
+                    val type = object : com.google.gson.reflect.TypeToken<List<Favourite>>() {}.type
+                    val favorites: List<Favourite> = gson.fromJson(json, type)
+                    viewModelScope.launch {
+                        favouriteRepository.replaceAllFavourites(favorites)
+                    }
+                }
+            }
+    }
+
+    init {
+        startRealtimeFavoritesSync()
+    }
 
 }
