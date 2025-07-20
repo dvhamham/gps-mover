@@ -1,32 +1,27 @@
 package com.hamham.gpsmover.viewmodel
 
-
 import android.app.DownloadManager
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.database.ContentObserver
 import android.database.Cursor
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.hamham.gpsmover.BuildConfig
 import com.hamham.gpsmover.R
-import com.hamham.gpsmover.utils.ext.onIO
-import com.hamham.gpsmover.utils.ext.onMain
 import com.hamham.gpsmover.favorites.Favourite
 import com.hamham.gpsmover.favorites.FavouriteRepository
-import com.hamham.gpsmover.utils.PrefManager
-import com.hamham.gpsmover.selfhook.XposedSelfHooks
 import com.hamham.gpsmover.update.UpdateChecker
+import com.hamham.gpsmover.utils.PrefManager
+import com.hamham.gpsmover.utils.ext.onMain
+import com.hamham.gpsmover.xposed.XposedSelfHooks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -37,32 +32,30 @@ import timber.log.Timber
 import java.io.File
 import javax.inject.Inject
 import kotlin.math.roundToInt
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
 
-
+/**
+ * ViewModel responsible for managing app state and business logic.
+ */
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val prefManger: PrefManager,
     private val updateChecker: UpdateChecker,
     private val downloadManager: DownloadManager,
-    private val favouriteRepository: com.hamham.gpsmover.favorites.FavouriteRepository,
+    private val favouriteRepository: FavouriteRepository,
     @ApplicationContext context: Context
 ) : ViewModel() {
 
+    // Location and map settings
+    val getLat = prefManger.getLat
+    val getLng = prefManger.getLng
+    val isStarted = MutableLiveData(prefManger.isStarted)
+    val mapType = prefManger.mapType
 
-    val getLat  = prefManger.getLat
-    val getLng  = prefManger.getLng
-    val isStarted = MutableLiveData<Boolean>().apply {
-        value = prefManger.isStarted
-    }
     fun refreshIsStarted() {
         isStarted.value = prefManger.isStarted
     }
-    val mapType = prefManger.mapType
-    
-    // Settings related properties
+
+    // UI settings
     val darkTheme = MutableLiveData<String>().apply {
         value = when (prefManger.darkTheme) {
             AppCompatDelegate.MODE_NIGHT_NO -> "light"
@@ -70,29 +63,17 @@ class MainViewModel @Inject constructor(
             else -> "system"
         }
     }
-    
-    val accuracy = MutableLiveData<Int>().apply {
-        value = prefManger.accuracy?.toIntOrNull() ?: 5
-    }
-    
-    val randomPosition = MutableLiveData<Boolean>().apply {
-        value = prefManger.isRandomPositionEnabled
-    }
-    
-    val advancedHook = MutableLiveData<Boolean>().apply {
-        value = prefManger.isHookSystem
-    }
 
+    val accuracy = MutableLiveData(prefManger.accuracy?.toIntOrNull() ?: 5)
+    val randomPosition = MutableLiveData(prefManger.isRandomPositionEnabled)
+    val advancedHook = MutableLiveData(prefManger.isHookSystem)
 
+    // Favorites state
     val allFavList = favouriteRepository.getAllFavourites.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
         emptyList()
     )
-
-    // لم تعد هناك حاجة لدالة doGetUserDetails لأن التزامن أصبح لحظياً مع Room
-
-    // إذا أردت مزامنة مع Firestore أضف دوال منفصلة لذلك عند الحاجة فقط
 
     fun insertFavourite(favourite: Favourite) {
         viewModelScope.launch {
@@ -122,7 +103,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-
+    // Xposed module status
     val isXposed = MutableLiveData<Boolean>()
     fun updateXposedState() {
         onMain {
@@ -130,12 +111,9 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    // Settings update methods
+    fun update(start: Boolean, la: Double, ln: Double) = prefManger.update(start, la, ln)
 
-    fun update(start: Boolean, la: Double, ln: Double)  {
-        prefManger.update(start,la,ln)
-    }
-    
-    // Settings update functions
     fun updateDarkTheme(theme: String) {
         val themeMode = when (theme) {
             "light" -> AppCompatDelegate.MODE_NIGHT_NO
@@ -145,38 +123,37 @@ class MainViewModel @Inject constructor(
         prefManger.darkTheme = themeMode
         darkTheme.value = theme
     }
-    
+
     fun updateMapType(type: Int) {
         prefManger.mapType = type
     }
-    
+
     fun updateAccuracy(acc: Int) {
         prefManger.accuracy = acc.toString()
         accuracy.value = acc
     }
-    
+
     fun updateRandomPosition(enabled: Boolean) {
-        // Set randomization range to 0 if disabled, or keep current value if enabled
         if (!enabled) {
             prefManger.randomPositionRange = "0"
         } else if ((prefManger.randomPositionRange?.toDoubleOrNull() ?: 0.0) == 0.0) {
-            prefManger.randomPositionRange = "2" // default to 2 meters if enabling and was 0
+            prefManger.randomPositionRange = "2"
         }
         randomPosition.value = prefManger.isRandomPositionEnabled
     }
-    
+
     fun updateAdvancedHook(enabled: Boolean) {
         prefManger.isHookSystem = enabled
         advancedHook.value = enabled
     }
 
+    // Update checking and downloading
     private val _response = MutableLiveData<Long>()
     val response: LiveData<Long> = _response
 
-
     private val _update = MutableStateFlow<UpdateChecker.Update?>(null).apply {
         viewModelScope.launch {
-            withContext(Dispatchers.IO){
+            withContext(Dispatchers.IO) {
                 updateChecker.clearCachedDownloads(context)
             }
             updateChecker.getLatestRelease().collect {
@@ -184,35 +161,28 @@ class MainViewModel @Inject constructor(
             }
         }
     }
+    val update = _update.asStateFlow()
 
-     val update = _update.asStateFlow()
-
-    fun getAvailableUpdate(): UpdateChecker.Update? {
-        return _update.value
-    }
-
+    fun getAvailableUpdate(): UpdateChecker.Update? = _update.value
     fun clearUpdate() {
         viewModelScope.launch {
             _update.emit(null)
         }
     }
 
-
+    // Download handling
     private var requestId: Long? = null
     private var _downloadState = MutableStateFlow<State>(State.Idle)
     private var downloadFile: File? = null
     val downloadState = _downloadState.asStateFlow()
 
-
-    // Got idea from https://github.com/KieronQuinn/DarQ for Check Update
-
     fun startDownload(context: Context, update: UpdateChecker.Update) {
-        if(_downloadState.value is State.Idle) {
+        if (_downloadState.value is State.Idle) {
             downloadUpdate(context, update.assetUrl, update.assetName)
         }
     }
 
-    private val downloadStateReceiver = object: BroadcastReceiver() {
+    private val downloadStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent?) {
             viewModelScope.launch {
                 var success = false
@@ -236,7 +206,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private val downloadObserver = object: ContentObserver(Handler(Looper.getMainLooper())) {
+    private val downloadObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean, uri: Uri?) {
             super.onChange(selfChange, uri)
             viewModelScope.launch {
@@ -245,12 +215,8 @@ class MainViewModel @Inject constructor(
                 val c: Cursor = downloadManager.query(query)
                 var progress = 0.0
                 if (c.moveToFirst()) {
-                    val sizeIndex: Int =
-                        c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
-                    val downloadedIndex: Int =
-                        c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
-                    val size = c.getInt(sizeIndex)
-                    val downloaded = c.getInt(downloadedIndex)
+                    val size = c.getInt(c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                    val downloaded = c.getInt(c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
                     if (size != -1) progress = downloaded * 100.0 / size
                 }
                 _downloadState.emit(State.Downloading(progress.roundToInt()))
@@ -259,9 +225,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun downloadUpdate(context: Context, url: String, fileName: String) = viewModelScope.launch {
-        val downloadFolder = File(context.externalCacheDir, "updates").apply {
-            mkdirs()
-        }
+        val downloadFolder = File(context.externalCacheDir, "updates").apply { mkdirs() }
         downloadFile = File(downloadFolder, fileName)
         ContextCompat.registerReceiver(
             context,
@@ -279,48 +243,39 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun openPackageInstaller(context: Context, uri: Uri){
+    fun openPackageInstaller(context: Context, uri: Uri) {
         runCatching {
             Intent(Intent.ACTION_VIEW, uri).apply {
                 putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
                 setDataAndType(uri, "application/vnd.android.package-archive")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }.also {
-                context.startActivity(it)
-            }
-        }.onFailure {
-            it.printStackTrace()
-        }
-
+            }.also { context.startActivity(it) }
+        }.onFailure { it.printStackTrace() }
     }
 
     fun cancelDownload(context: Context) {
         viewModelScope.launch {
-            requestId?.let {
-                downloadManager.remove(it)
-            }
+            requestId?.let { downloadManager.remove(it) }
             context.unregisterReceiver(downloadStateReceiver)
             context.contentResolver.unregisterContentObserver(downloadObserver)
             _downloadState.emit(State.Idle)
         }
     }
 
+    // Download state sealed class
     sealed class State {
-        object Idle: State()
-        data class Downloading(val progress: Int): State()
-        data class Done(val fileUri: Uri): State()
-        object Failed: State()
+        object Idle : State()
+        data class Downloading(val progress: Int) : State()
+        data class Done(val fileUri: Uri) : State()
+        object Failed : State()
     }
 
-    /**
-     * دالة لترحيل المفضلات من Firestore إلى قاعدة البيانات المحلية Room (مرة واحدة فقط)
-     * استدعها عند الحاجة لترحيل المفضلات القديمة.
-     */
+    // Firestore syncing
     fun migrateFavoritesFromFirestoreToRoom() {
         viewModelScope.launch {
-            val user = FirebaseAuth.getInstance().currentUser
-            val email = user?.email ?: return@launch
+            val user = FirebaseAuth.getInstance().currentUser ?: return@launch
+            val email = user.email ?: return@launch
             FirebaseFirestore.getInstance().collection("favorites").document(email).get()
                 .addOnSuccessListener { doc ->
                     val favList = doc.get("list")
@@ -329,35 +284,26 @@ class MainViewModel @Inject constructor(
                         val json = gson.toJson(favList)
                         val type = object : com.google.gson.reflect.TypeToken<List<Favourite>>() {}.type
                         val favorites: List<Favourite> = gson.fromJson(json, type)
-                        viewModelScope.launch {
-                            favouriteRepository.insertAllFavourites(favorites)
-                        }
+                        viewModelScope.launch { favouriteRepository.insertAllFavourites(favorites) }
                     }
                 }
         }
     }
 
-    /**
-     * مزامنة كل المفضلات من Room إلى Firestore
-     */
     private fun syncFavoritesToFirestore() {
         viewModelScope.launch {
-            val user = FirebaseAuth.getInstance().currentUser
-            val email = user?.email ?: return@launch
-            // اجلب كل المفضلات من Room
+            val user = FirebaseAuth.getInstance().currentUser ?: return@launch
+            val email = user.email ?: return@launch
             val favorites = favouriteRepository.getAllFavourites.first()
             FirebaseFirestore.getInstance().collection("favorites").document(email)
                 .set(mapOf("list" to favorites))
         }
     }
 
-    /**
-     * مزامنة المفضلات من Firestore إلى Room (عند فتح التطبيق أو عند الطلب)
-     */
     fun syncFavoritesFromFirestore() {
         viewModelScope.launch {
-            val user = FirebaseAuth.getInstance().currentUser
-            val email = user?.email ?: return@launch
+            val user = FirebaseAuth.getInstance().currentUser ?: return@launch
+            val email = user.email ?: return@launch
             FirebaseFirestore.getInstance().collection("favorites").document(email).get()
                 .addOnSuccessListener { doc ->
                     val favList = doc.get("list")
@@ -366,22 +312,17 @@ class MainViewModel @Inject constructor(
                         val json = gson.toJson(favList)
                         val type = object : com.google.gson.reflect.TypeToken<List<Favourite>>() {}.type
                         val favorites: List<Favourite> = gson.fromJson(json, type)
-                        viewModelScope.launch {
-                            favouriteRepository.replaceAllFavourites(favorites)
-                        }
+                        viewModelScope.launch { favouriteRepository.replaceAllFavourites(favorites) }
                     }
                 }
         }
     }
 
-    /**
-     * تفعيل مزامنة لحظية (real-time) مع Firestore: أي تغيير في السحابة يحدث مباشرة في التطبيق
-     */
     private var firestoreListener: ListenerRegistration? = null
     private fun startRealtimeFavoritesSync() {
         val user = FirebaseAuth.getInstance().currentUser ?: return
         val email = user.email ?: return
-        firestoreListener?.remove() // أزل أي Listener سابق
+        firestoreListener?.remove()
         firestoreListener = FirebaseFirestore.getInstance()
             .collection("favorites")
             .document(email)
@@ -393,9 +334,7 @@ class MainViewModel @Inject constructor(
                     val json = gson.toJson(favList)
                     val type = object : com.google.gson.reflect.TypeToken<List<Favourite>>() {}.type
                     val favorites: List<Favourite> = gson.fromJson(json, type)
-                    viewModelScope.launch {
-                        favouriteRepository.replaceAllFavourites(favorites)
-                    }
+                    viewModelScope.launch { favouriteRepository.replaceAllFavourites(favorites) }
                 }
             }
     }
@@ -403,5 +342,4 @@ class MainViewModel @Inject constructor(
     init {
         startRealtimeFavoritesSync()
     }
-
 }

@@ -1,4 +1,4 @@
-package com.hamham.gpsmover.selfhook
+package com.hamham.gpsmover.xposed
 
 object XposedSelfHooks {
 

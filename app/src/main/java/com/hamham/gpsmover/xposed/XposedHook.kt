@@ -448,13 +448,13 @@ class XposedHook : IXposedHookLoadPackage {
     }
 
     private fun setupSelfHooks(classLoader: ClassLoader){
-        XposedHelpers.findAndHookMethod("com.hamham.gpsmover.selfhook.XposedSelfHooks", classLoader, "isXposedModuleEnabled", object: XC_MethodReplacement(){
+        XposedHelpers.findAndHookMethod("com.hamham.gpsmover.xposed.XposedSelfHooks", classLoader, "isXposedModuleEnabled", object: XC_MethodReplacement(){
             override fun replaceHookedMethod(param: MethodHookParam): Any {
                 param.result = true
                 return true
             }
         })
-        XposedHelpers.findAndHookMethod("com.hamham.gpsmover.selfhook.XposedSelfHooks", classLoader, "getXSharedPrefsPath", object: XC_MethodReplacement(){
+        XposedHelpers.findAndHookMethod("com.hamham.gpsmover.xposed.XposedSelfHooks", classLoader, "getXSharedPrefsPath", object: XC_MethodReplacement(){
             override fun replaceHookedMethod(param: MethodHookParam): Any {
                 val path = XSharedPreferences(BuildConfig.APPLICATION_ID, SHARED_PREFS_FILENAME).file.absolutePath
                 param.result = path

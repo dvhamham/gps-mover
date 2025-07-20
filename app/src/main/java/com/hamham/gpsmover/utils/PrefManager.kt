@@ -6,7 +6,7 @@ import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatDelegate
 import com.hamham.gpsmover.BuildConfig
 import com.hamham.gpsmover.gsApp
-import com.hamham.gpsmover.selfhook.XposedSelfHooks
+import com.hamham.gpsmover.xposed.XposedSelfHooks
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope

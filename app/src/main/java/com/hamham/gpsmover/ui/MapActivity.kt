@@ -36,7 +36,6 @@ import com.hamham.gpsmover.R
 import com.hamham.gpsmover.favorites.FavoritesPage
 import com.hamham.gpsmover.favorites.Favourite
 import com.hamham.gpsmover.databinding.ActivityMapBinding
-import com.hamham.gpsmover.utils.FavoritesImportExport
 import com.hamham.gpsmover.utils.NotificationsChannel
 import com.hamham.gpsmover.utils.ext.*
 import com.hamham.gpsmover.viewmodel.MainViewModel
@@ -93,7 +92,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
     private var xposedDialog: MaterialAlertDialogBuilder? = null
     private lateinit var alertDialog: MaterialAlertDialogBuilder
     private lateinit var dialog: androidx.appcompat.app.AlertDialog
-    private val favoritesImportExport by lazy { FavoritesImportExport(this) }
     private val IMPORT_REQUEST_CODE = 1001
     private val EXPORT_REQUEST_CODE = 1002
     private var settingsPageInstance: SettingsPage? = null
@@ -933,12 +931,15 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         if (requestCode == IMPORT_REQUEST_CODE && resultCode == RESULT_OK) {
             data?.data?.let { uri ->
                 lifecycleScope.launch {
-                    val importedFavorites = favoritesImportExport.importFavorites(uri)
-                    if (importedFavorites != null) {
-                        viewModel.replaceAllFavourites(importedFavorites)
-                        showFavoritesMessageBar("Imported ${importedFavorites.size} favorites", SnackbarType.SUCCESS)
+                    try {
+                        val inputStream = contentResolver.openInputStream(uri)
+                        val json = inputStream?.bufferedReader()?.readText() ?: throw Exception("Failed to read file")
+                        val type = object : com.google.gson.reflect.TypeToken<List<com.hamham.gpsmover.favorites.Favourite>>() {}.type
+                        val favorites: List<com.hamham.gpsmover.favorites.Favourite> = com.google.gson.Gson().fromJson(json, type)
+                        viewModel.replaceAllFavourites(favorites)
+                        showFavoritesMessageBar("Imported ${favorites.size} favorites", SnackbarType.SUCCESS)
                         showFavoritesPage()
-                    } else {
+                    } catch (e: Exception) {
                         showFavoritesMessageBar("Failed to import favorites", SnackbarType.ERROR)
                     }
                 }
