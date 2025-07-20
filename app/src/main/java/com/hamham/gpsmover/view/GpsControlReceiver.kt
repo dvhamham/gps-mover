@@ -1,4 +1,4 @@
-package com.hamham.gpsmover.ui
+package com.hamham.gpsmover.view
 
 import android.content.BroadcastReceiver
 import android.content.Context

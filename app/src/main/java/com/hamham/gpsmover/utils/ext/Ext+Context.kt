@@ -10,7 +10,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.widget.Toast
 import androidx.core.app.ActivityCompat.requestPermissions
-import com.hamham.gpsmover.ui.MapActivity
+import com.hamham.gpsmover.view.MapActivity
 import android.graphics.Color
 import android.view.Gravity
 import android.view.LayoutInflater

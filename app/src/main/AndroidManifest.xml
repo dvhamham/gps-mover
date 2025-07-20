@@ -23,7 +23,7 @@
 
         <!-- Main activity (entry point) -->
         <activity
-            android:name=".ui.MapActivity"
+            android:name=".view.MapActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -32,7 +32,7 @@
         </activity>
 
         <!-- Login activity for authentication -->
-        <activity android:name=".ui.LoginActivity" />
+        <activity android:name=".view.LoginActivity" />
 
         <!-- Google Maps API key -->
         <meta-data
@@ -66,7 +66,7 @@
 
         <!-- Broadcast receiver for GPS control actions -->
         <receiver
-            android:name=".ui.GpsControlReceiver"
+            android:name=".view.GpsControlReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter android:priority="1000">
