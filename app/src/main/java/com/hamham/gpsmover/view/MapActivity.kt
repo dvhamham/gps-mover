@@ -36,7 +36,7 @@ import com.hamham.gpsmover.R
 import com.hamham.gpsmover.favorites.FavoritesPage
 import com.hamham.gpsmover.favorites.Favourite
 import com.hamham.gpsmover.databinding.ActivityMapBinding
-import com.hamham.gpsmover.utils.ext.*
+import com.hamham.gpsmover.helpers.*
 import com.hamham.gpsmover.viewmodel.MainViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap

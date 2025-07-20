@@ -19,7 +19,7 @@ import com.hamham.gpsmover.R
 import com.hamham.gpsmover.favorites.Favourite
 import com.hamham.gpsmover.favorites.FavouriteRepository
 import com.hamham.gpsmover.xposed.PrefManager
-import com.hamham.gpsmover.utils.ext.onMain
+import com.hamham.gpsmover.helpers.onMain
 import com.hamham.gpsmover.xposed.XposedSelfHooks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext

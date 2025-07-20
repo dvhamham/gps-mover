@@ -1,4 +1,4 @@
-package com.hamham.gpsmover.utils.ext
+package com.hamham.gpsmover.helpers
 
 import android.view.HapticFeedbackConstants
 import android.view.View

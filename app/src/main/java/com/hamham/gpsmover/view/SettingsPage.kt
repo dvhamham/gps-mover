@@ -13,10 +13,10 @@ import com.google.android.material.textfield.TextInputEditText
 import com.hamham.gpsmover.R
 import com.hamham.gpsmover.xposed.PrefManager
 import com.hamham.gpsmover.viewmodel.MainViewModel
-import com.hamham.gpsmover.utils.ext.showCustomSnackbar
-import com.hamham.gpsmover.utils.ext.SnackbarType
+import com.hamham.gpsmover.helpers.showCustomSnackbar
+import com.hamham.gpsmover.helpers.SnackbarType
 import androidx.appcompat.app.AppCompatDelegate
-import com.hamham.gpsmover.utils.ext.performHapticClick
+import com.hamham.gpsmover.helpers.performHapticClick
 import com.google.firebase.auth.FirebaseAuth
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
