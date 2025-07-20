@@ -36,7 +36,6 @@ import com.hamham.gpsmover.R
 import com.hamham.gpsmover.favorites.FavoritesPage
 import com.hamham.gpsmover.favorites.Favourite
 import com.hamham.gpsmover.databinding.ActivityMapBinding
-import com.hamham.gpsmover.utils.NotificationsChannel
 import com.hamham.gpsmover.utils.ext.*
 import com.hamham.gpsmover.viewmodel.MainViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -83,7 +82,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
     private val binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
     private lateinit var mMap: GoogleMap
     val viewModel by viewModels<MainViewModel>()
-    private val notificationsChannel by lazy { NotificationsChannel() }
     private lateinit var favListAdapter: FavoritesPage.FavListAdapter
     private var mMarker: Marker? = null
     private var mLatLng: LatLng? = null
@@ -1123,18 +1121,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
     }
 
     private fun showStartNotification(address: String) {
-        notificationsChannel.showNotification(this) {
-            it.setSmallIcon(R.drawable.ic_baseline_stop_24)
-            it.setContentTitle(getString(R.string.location_set))
-            it.setContentText(address)
-            it.setAutoCancel(true)
-            it.setCategory(Notification.CATEGORY_EVENT)
-            it.priority = NotificationCompat.PRIORITY_HIGH
-        }
+        // Remove: notificationsChannel.showNotification(this) { ... }
     }
 
     private fun cancelNotification() {
-        notificationsChannel.cancelAllNotifications(this)
+        // Remove: notificationsChannel.cancelAllNotifications(this)
     }
 
     private fun setupSearchBar() {

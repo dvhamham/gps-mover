@@ -2,7 +2,7 @@ package com.hamham.gpsmover
 
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
-import com.hamham.gpsmover.utils.PrefManager
+import com.hamham.gpsmover.xposed.PrefManager
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

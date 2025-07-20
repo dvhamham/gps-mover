@@ -11,7 +11,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.hamham.gpsmover.R
-import com.hamham.gpsmover.utils.PrefManager
+import com.hamham.gpsmover.xposed.PrefManager
 import com.hamham.gpsmover.viewmodel.MainViewModel
 import com.hamham.gpsmover.utils.ext.showCustomSnackbar
 import com.hamham.gpsmover.utils.ext.SnackbarType

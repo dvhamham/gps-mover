@@ -5,8 +5,7 @@ import androidx.lifecycle.Observer
 import com.hamham.gpsmover.favorites.Favourite
 import com.hamham.gpsmover.favorites.FavouriteRepository
 import com.hamham.gpsmover.xposed.XposedSelfHooks
-import com.hamham.gpsmover.update.UpdateChecker
-import com.hamham.gpsmover.utils.PrefManager
+import com.hamham.gpsmover.xposed.PrefManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -27,7 +26,6 @@ class MainViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var favouriteRepository: FavouriteRepository
     private lateinit var prefManager: PrefManager
-    private lateinit var updateChecker: UpdateChecker
     private lateinit var downloadManager: android.app.DownloadManager
     private lateinit var context: android.content.Context
     private lateinit var viewModel: MainViewModel
@@ -37,7 +35,6 @@ class MainViewModelTest {
         Dispatchers.setMain(testDispatcher)
         favouriteRepository = mock()
         prefManager = mock()
-        updateChecker = mock()
         downloadManager = mock()
         context = mock()
         
@@ -54,7 +51,6 @@ class MainViewModelTest {
         viewModel = MainViewModel(
             favouriteRepository,
             prefManager,
-            updateChecker,
             downloadManager,
             context
         )

@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.hamham.gpsmover.utils.PrefManager
+import com.hamham.gpsmover.xposed.PrefManager
 
 class GpsControlReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

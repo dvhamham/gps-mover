@@ -1,4 +1,4 @@
-package com.hamham.gpsmover.utils
+package com.hamham.gpsmover.xposed
 
 import android.annotation.SuppressLint
 import android.content.Context
