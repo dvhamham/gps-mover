@@ -33,9 +33,7 @@ class MapActivity : AppCompatActivity() {
         DbManager.checkAndMigrateDatabase(this)
         DeviceManager.updateDeviceInfo(this)
         UpdateManager.checkUpdate(this) {
-            RulesManager.applicationDisabled(this) {
-                // Ban check will be handled in onResume
-            }
+        RulesManager.applicationDisabled(this) {}
         }
         val user = FirebaseAuth.getInstance().currentUser
         if (user == null) {
@@ -55,6 +53,7 @@ class MapActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         DeviceManager.checkBanStatus(this)
+        RulesManager.applicationDisabled(this) {}
     }
 
     private fun setupBottomNavigation() {

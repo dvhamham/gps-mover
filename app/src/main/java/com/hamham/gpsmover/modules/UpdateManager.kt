@@ -52,7 +52,7 @@ object UpdateManager {
                 // --- Force Update Logic ---
                 // A forced update is triggered if the user's version is below the minimum required,
                 // or if an update is marked as 'required' and the user's version is older than the latest.
-                if (versionCode < minRequiredVersion || (updateRequired && versionCode < latestVersion)) {
+                if (versionCode > minRequiredVersion || (updateRequired && versionCode < latestVersion)) {
                     val dialog = AlertDialog.Builder(context)
                         .setTitle("Update Available")
                         .setMessage(updateMessage ?: "A new update is available! Please update to continue.")
