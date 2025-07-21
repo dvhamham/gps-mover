@@ -50,24 +50,22 @@ class MapActivity : AppCompatActivity() {
             .requestEmail()
             .build()
         googleSignInClient = GoogleSignIn.getClient(this, gso)
-        // --- Startup sequence ---
-        // 1. Check for mandatory or optional app updates
+        // إذا كان تسجيل الخروج، أظهر الديلوك فورًا بعد رسم الخريطة
+        if (intent.getBooleanExtra("showLoginDialogImmediately", false)) {
+            window.decorView.post { showLoginDialog() }
+            return
+        }
+        // باقي عمليات التهيئة
         UpdateManager.checkUpdate(this) {
-            // 2. Validate and migrate the database if needed
             DbManager.dbMigrate(this)
-            // 3. Update device information in the database
             DeviceManager.updateDeviceInfo(this)
-            // 4. Check for a global app ban (kill switch)
             RulesManager.applicationDisabled(this) {
                 setupBottomNavigation()
                 checkXposedModule()
-                // بعد 5 ثوانٍ تحقق من المستخدم
-                window.decorView.postDelayed({
-                    val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-                    if (user == null) {
-                        showLoginDialog()
-                    }
-                }, 5000)
+                val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                if (user == null) {
+                    showLoginDialog()
+                }
             }
         }
     }

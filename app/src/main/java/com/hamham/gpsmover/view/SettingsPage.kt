@@ -191,8 +191,9 @@ class SettingsPage @JvmOverloads constructor(
             googleSignInClient?.signOut()?.addOnCompleteListener {
                 googleSignInClient?.revokeAccess()?.addOnCompleteListener {
                     firebaseAuth.signOut()
-                    val intent = Intent(context, LoginActivity::class.java)
+                    val intent = Intent(context, MapActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    intent.putExtra("showLoginDialogImmediately", true)
                     context.startActivity(intent)
                     if (context is Activity) {
                         (context as Activity).finish()
