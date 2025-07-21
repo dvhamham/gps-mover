@@ -70,18 +70,30 @@ class MapActivity : AppCompatActivity() {
             when (menuItem.itemId) {
                 R.id.navigation_map -> {
                     supportFragmentManager.beginTransaction()
+                        .setCustomAnimations(
+                            R.anim.fade_in, R.anim.fade_out,
+                            R.anim.fade_in, R.anim.fade_out
+                        )
                         .replace(R.id.map_fragment_container, MapFragment(), "MapFragment")
                         .commit()
                     true
                 }
                 R.id.navigation_favorites -> {
                     supportFragmentManager.beginTransaction()
+                        .setCustomAnimations(
+                            R.anim.fade_in, R.anim.fade_out,
+                            R.anim.fade_in, R.anim.fade_out
+                        )
                         .replace(R.id.map_fragment_container, FavoritesFragment(), "FavoritesFragment")
                         .commit()
                     true
                 }
                 R.id.navigation_settings -> {
                     supportFragmentManager.beginTransaction()
+                        .setCustomAnimations(
+                            R.anim.fade_in, R.anim.fade_out,
+                            R.anim.fade_in, R.anim.fade_out
+                        )
                         .replace(R.id.map_fragment_container, SettingsFragment(), "SettingsFragment")
                         .commit()
                     true

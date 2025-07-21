@@ -54,6 +54,25 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMapClickListener
         initializeMap()
         setupUI(view)
         viewModel.isStarted.observe(viewLifecycleOwner) { setFloatActionButton(view) }
+        // Observe moveToLatLng to move map when a favorite is clicked
+        viewModel.moveToLatLng.observe(viewLifecycleOwner) { latLng ->
+            if (latLng != null && ::mMap.isInitialized) {
+                lat = latLng.latitude
+                lon = latLng.longitude
+                mLatLng = latLng
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15.0f))
+                if (mMarker == null) {
+                    mMarker = mMap.addMarker(
+                        MarkerOptions().position(latLng).draggable(false)
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)).visible(true)
+                    )
+                } else {
+                    mMarker?.position = latLng
+                    mMarker?.isVisible = true
+                }
+                mMarker?.showInfoWindow()
+            }
+        }
     }
 
     private fun setupUI(view: View) {
@@ -206,6 +225,23 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMapClickListener
             setOnMapClickListener(this@MapFragment)
             if (viewModel.isStarted.value == true) {
                 mMarker?.isVisible = true
+                mMarker?.showInfoWindow()
+            }
+            // Move to favorite location if requested
+            viewModel.moveToLatLng.value?.let { favLatLng ->
+                lat = favLatLng.latitude
+                lon = favLatLng.longitude
+                mLatLng = favLatLng
+                animateCamera(CameraUpdateFactory.newLatLngZoom(favLatLng, 12.0f))
+                if (mMarker == null) {
+                    mMarker = addMarker(
+                        MarkerOptions().position(favLatLng).draggable(false)
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)).visible(true)
+                    )
+                } else {
+                    mMarker?.position = favLatLng
+                    mMarker?.isVisible = true
+                }
                 mMarker?.showInfoWindow()
             }
         }

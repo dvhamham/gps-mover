@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.*
+import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -110,7 +111,10 @@ class MainViewModel @Inject constructor(
     }
 
     // Settings update methods
-    fun update(start: Boolean, la: Double, ln: Double) = prefManger.update(start, la, ln)
+    fun update(start: Boolean, la: Double, ln: Double) {
+        prefManger.update(start, la, ln)
+        isStarted.value = start
+    }
 
     fun updateDarkTheme(theme: String) {
         val themeMode = when (theme) {
@@ -222,6 +226,11 @@ class MainViewModel @Inject constructor(
                     viewModelScope.launch { favouriteRepository.replaceAllFavourites(favorites) }
                 }
             }
+    }
+
+    val moveToLatLng = MutableLiveData<LatLng?>()
+    fun moveToLocation(lat: Double, lng: Double) {
+        moveToLatLng.value = LatLng(lat, lng)
     }
 
     init {

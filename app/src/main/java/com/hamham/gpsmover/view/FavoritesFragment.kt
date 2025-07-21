@@ -28,7 +28,11 @@ class FavoritesFragment : Fragment() {
         val favoritesPage = view as FavoritesPage
         favoritesPage.setViewModel(viewModel, mainScope)
         favoritesPage.setOnFavoriteClick { favourite ->
-            // يمكنك هنا التنقل للخريطة أو تنفيذ أي منطق عند الضغط على مفضلة
+            // Switch to map page
+            requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation).selectedItemId = R.id.navigation_map
+            // Pass coordinates to ViewModel
+            viewModel.moveToLocation(favourite.lat ?: 0.0, favourite.lng ?: 0.0)
+            viewModel.update(true, favourite.lat ?: 0.0, favourite.lng ?: 0.0)
         }
     }
 } 
