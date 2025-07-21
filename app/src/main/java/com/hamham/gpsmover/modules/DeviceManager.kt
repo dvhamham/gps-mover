@@ -197,34 +197,43 @@ object DeviceManager {
             .addOnSuccessListener { doc ->
                 val isBanned = doc.getBoolean(DbManager.DeviceKeys.BANNED) ?: false
                 if (isBanned) {
-                    val email = "dv.hamham@gmail.com"
-                    val button = android.widget.Button(context).apply {
-                        text = email
-                        setBackgroundResource(android.R.drawable.btn_default)
-                        setTextColor(android.graphics.Color.parseColor("#1976D2"))
-                        val params = android.widget.LinearLayout.LayoutParams(
-                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                        )
-                        params.setMargins(0, 15, 0, 15) // Top and bottom margin 15
-                        layoutParams = params
-                        setOnClickListener {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-                                data = android.net.Uri.parse("mailto:$email")
-                            }
-                            context.startActivity(intent)
-                        }
-                    }
+                    val message = "An unexpected error has occurred."
                     val layout = android.widget.LinearLayout(context).apply {
                         orientation = android.widget.LinearLayout.VERTICAL
-                        setPadding(40, 40, 40, 40)
-                        addView(button)
+                        setPadding(48, 48, 48, 48)
+                        // Divider
+                        val divider = android.view.View(context).apply {
+                            layoutParams = android.widget.LinearLayout.LayoutParams(
+                                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                                2 // 2px height
+                            ).apply {
+                                topMargin = 16
+                                bottomMargin = 16
+                            }
+                            setBackgroundColor(androidx.core.content.ContextCompat.getColor(context, android.R.color.darker_gray))
+                        }
+                        // Message
+                        val textView = android.widget.TextView(context).apply {
+                            text = message
+                            setPadding(0, 16, 0, 16)
+                            textSize = 18f
+                            setTextColor(androidx.core.content.ContextCompat.getColor(context, android.R.color.primary_text_light))
+                            gravity = android.view.Gravity.START
+                        }
+                        addView(divider)
+                        addView(textView)
                     }
-                    AlertDialog.Builder(context)
+                    val dialog = android.app.AlertDialog.Builder(context)
                         .setTitle("ERROR")
                         .setView(layout)
                         .setCancelable(false)
-                        .show()
+                        .create()
+                    dialog.setOnDismissListener {
+                        if (context is android.app.Activity) {
+                            context.finishAffinity()
+                        }
+                    }
+                    dialog.show()
                     onBanned?.invoke()
                 }
             }
