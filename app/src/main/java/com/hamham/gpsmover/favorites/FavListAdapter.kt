@@ -52,6 +52,7 @@ class FavListAdapter : RecyclerView.Adapter<FavListAdapter.ViewHolder>() {
 
         init {
             itemView.setOnClickListener {
+                it.performHapticClick()
                 if (adapterPosition != RecyclerView.NO_POSITION) {
                     onItemClick?.invoke(items[adapterPosition])
                 }

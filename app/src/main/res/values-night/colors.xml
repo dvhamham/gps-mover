@@ -1,38 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary color (main accent for dark theme) -->
-    <color name="primary">#4C585B</color>
+    <!-- Flat Primary color (slate gray) -->
+    <color name="primary">#45474B</color>
     <color name="onPrimary">#FFFFFF</color>
 
-    <!-- Secondary color (used for secondary accents in dark theme) -->
-    <color name="secondary">#7D9770</color>
-    <color name="onSecondary">#FFFFFF</color>
+    <!-- Flat Secondary color (soft olive) -->
+    <color name="secondary">#A4B494</color>
+    <color name="onSecondary">#1C1C1C</color>
 
-    <!-- Tertiary color (used for highlights or special elements in dark theme) -->
-    <color name="tertiary">#C97B5C</color>
-    <color name="onTertiary">#000000</color>
+    <!-- Flat Tertiary color (dusty peach) -->
+    <color name="tertiary">#D7A88F</color>
+    <color name="onTertiary">#1C1C1C</color>
 
-    <!-- Background colors (dark background) -->
-    <color name="background">#121212</color>
-    <color name="onBackground">#E1E1E1</color>
+    <!-- Flat dark background -->
+    <color name="background">#1E1E1E</color>
+    <color name="onBackground">#E0E0E0</color>
 
-    <!-- Surface colors (cards, containers, etc. in dark theme) -->
-    <color name="surface">#232728</color>
+    <!-- Flat surface (cards, containers) -->
+    <color name="surface">#2A2A2A</color>
     <color name="onSurface">#F5F5F5</color>
 
-    <!-- Error colors (dark theme) -->
-    <color name="error">#D65A5A</color>
-    <color name="onError">#000000</color>
+    <!-- Flat error color -->
+    <color name="error">#E57373</color>
+    <color name="onError">#FFFFFF</color>
 
-    <!-- Outline and border colors (dark theme) -->
-    <color name="outline">#5C6669</color>
+    <!-- Flat outline color -->
+    <color name="outline">#757575</color>
 
-    <!-- Info color (for informational messages in dark theme) -->
-    <color name="info">#5A9CA8</color>
+    <!-- Flat info color -->
+    <color name="info">#64B5F6</color>
 
-    <!-- Warning color (for warnings in dark theme) -->
-    <color name="warning">#E8B144</color>
+    <!-- Flat warning color -->
+    <color name="warning">#FFB74D</color>
 
-    <!-- Success color (for success states in dark theme) -->
-    <color name="success">#6DA984</color>
+    <!-- Flat success color -->
+    <color name="success">#81C784</color>
 </resources>

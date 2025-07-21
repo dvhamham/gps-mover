@@ -132,7 +132,7 @@ object DbManager {
      * Main entry point for the migration logic. This should be called on app startup.
      * It ensures all necessary documents are validated against their schemas.
      */
-    fun checkAndMigrateDatabase(context: Context) {
+    fun dbMigrate(context: Context) {
         val user = FirebaseAuth.getInstance().currentUser
         val androidId = android.provider.Settings.Secure.getString(context.contentResolver, android.provider.Settings.Secure.ANDROID_ID)
 

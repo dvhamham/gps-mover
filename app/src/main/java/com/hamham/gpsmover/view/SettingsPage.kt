@@ -176,6 +176,7 @@ class SettingsPage @JvmOverloads constructor(
         }
 
         signInButton.setOnClickListener {
+            it.performHapticClick()
             val signInIntent = googleSignInClient!!.signInIntent
             if (context is Activity) {
                 (context as Activity).startActivityForResult(signInIntent, RC_SIGN_IN)
@@ -186,6 +187,7 @@ class SettingsPage @JvmOverloads constructor(
         }
 
         signOutButton.setOnClickListener {
+            it.performHapticClick()
             googleSignInClient?.signOut()?.addOnCompleteListener {
                 googleSignInClient?.revokeAccess()?.addOnCompleteListener {
                     firebaseAuth.signOut()

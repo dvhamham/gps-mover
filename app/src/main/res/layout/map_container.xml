@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            android:background="@drawable/floating_search_background">
+            android:background="@color/onPrimary">
 
             <EditText
                 android:id="@+id/search_edit_text"
@@ -37,14 +37,14 @@
                 android:inputType="text"
                 android:maxLines="1"
                 android:imeOptions="actionDone"
-                android:textColor="?attr/colorOnSurface"
-                android:textColorHint="?attr/colorOnSurfaceVariant"
+                android:textColor="@color/onSurface"
+                android:textColorHint="@color/primary"
                 android:background="@null"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:gravity="center_vertical"
                 android:drawableStart="@drawable/ic_baseline_search_24"
-                android:drawableTint="?attr/colorOnSurfaceVariant"
+                android:drawableTint="@color/primary"
                 android:drawablePadding="12dp" />
 
             <ImageButton
@@ -54,7 +54,7 @@
                 android:layout_gravity="end|center_vertical"
                 android:src="@drawable/ic_send"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="?attr/colorPrimary"
+                app:tint="@color/primary"
                 android:contentDescription="Send" />
 
         </FrameLayout>

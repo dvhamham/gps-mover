@@ -27,26 +27,33 @@ class MapActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Configure the system window for modern edge-to-edge design
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(binding.root)
-        // Startup sequence
-        DbManager.checkAndMigrateDatabase(this)
-        DeviceManager.updateDeviceInfo(this)
+        // --- Startup sequence ---
+        // 1. Check for mandatory or optional app updates
         UpdateManager.checkUpdate(this) {
-        RulesManager.applicationDisabled(this) {}
+            // 2. Validate and migrate the database if needed
+            DbManager.dbMigrate(this)
+            // 3. Update device information in the database
+            DeviceManager.updateDeviceInfo(this)
+            // 4. Check for a global app ban (kill switch)
+            RulesManager.applicationDisabled(this) {}
         }
+        // 5. Check if the user is logged in
         val user = FirebaseAuth.getInstance().currentUser
         if (user == null) {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
             return
         }
-
+        // 6. Load the map page as the default Fragment on first launch
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
                 .replace(R.id.map_fragment_container, MapFragment(), "MapFragment")
                 .commit()
         }
+        // 7. Initialize the bottom navigation bar
         setupBottomNavigation()
     }
 
@@ -59,6 +66,7 @@ class MapActivity : AppCompatActivity() {
     private fun setupBottomNavigation() {
         val bottomNavigation = findViewById<BottomNavigationView>(R.id.bottom_navigation)
         bottomNavigation.setOnItemSelectedListener { menuItem ->
+            bottomNavigation.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
             when (menuItem.itemId) {
                 R.id.navigation_map -> {
                     supportFragmentManager.beginTransaction()
