@@ -1,6 +1,5 @@
 package com.hamham.gpsmover.helpers
 
-
 import android.Manifest
 import android.annotation.TargetApi
 import android.app.Activity
@@ -20,6 +19,9 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
 import androidx.core.content.ContextCompat
+import android.view.HapticFeedbackConstants
+import android.view.View
+import com.hamham.gpsmover.R
 
 fun Context.showToast(msg : String){
     Toast.makeText(this,msg, Toast.LENGTH_LONG).show()
@@ -45,58 +47,27 @@ fun Context.isNetworkConnected(): Boolean {
     return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 }
 
-fun Context.showCustomSnackbar(
-    message: String,
-    type: SnackbarType = SnackbarType.INFO,
-    duration: Int = Snackbar.LENGTH_SHORT
-) {
-    val activity = this as? AppCompatActivity ?: return
-    val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
-    val snackbar = Snackbar.make(rootView, "", duration)
-    val snackbarView = snackbar.view
-    snackbarView.setPadding(0, 0, 0, 0)
-    val customView = LayoutInflater.from(this).inflate(android.R.layout.simple_list_item_1, null)
-    val textView = customView.findViewById<TextView>(android.R.id.text1)
-    textView.text = message
-    textView.textSize = 16f
-    textView.gravity = Gravity.CENTER
-
-    // احصل على ألوان الثيم الحالي
-    val typedValueBg = android.util.TypedValue()
-    val typedValueText = android.util.TypedValue()
-    val theme = this.theme
-    theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValueBg, true)
-    theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValueText, true)
-    val bgColor = typedValueBg.data
-    val textColor = typedValueText.data
-
-    // خصص الألوان حسب نوع الرسالة
-    when (type) {
-        SnackbarType.SUCCESS -> {
-            theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValueBg, true)
-            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValueText, true)
-        }
-        SnackbarType.ERROR -> {
-            theme.resolveAttribute(com.google.android.material.R.attr.colorError, typedValueBg, true)
-            theme.resolveAttribute(com.google.android.material.R.attr.colorOnError, typedValueText, true)
-        }
-        SnackbarType.INFO -> {
-            // استخدم surface وonSurface كما هو
-        }
+fun Activity.showCustomSnackbar(message: String, type: SnackbarType) {
+    val snackbar = Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG)
+    val context = snackbar.context
+    val view = snackbar.view
+    val textView = view.findViewById<android.widget.TextView>(com.google.android.material.R.id.snackbar_text)
+    
+    val (backgroundColor, textColor) = when (type) {
+        SnackbarType.SUCCESS -> Pair(context.getColor(R.color.success_green), context.getColor(R.color.white))
+        SnackbarType.ERROR -> Pair(context.getColor(R.color.error_red), context.getColor(R.color.white))
+        SnackbarType.INFO -> Pair(context.getColor(R.color.info_blue), context.getColor(R.color.white))
     }
-    customView.setBackgroundColor(typedValueBg.data)
-    textView.setTextColor(typedValueText.data)
-
-    val params = FrameLayout.LayoutParams(
-        FrameLayout.LayoutParams.MATCH_PARENT,
-        FrameLayout.LayoutParams.WRAP_CONTENT
-    )
-    params.gravity = Gravity.TOP
-    (snackbarView as? ViewGroup)?.addView(customView, params)
+    
+    view.setBackgroundColor(backgroundColor)
+    textView.setTextColor(textColor)
+    
     snackbar.show()
 }
 
 enum class SnackbarType {
-    SUCCESS, ERROR, INFO
+    SUCCESS,
+    ERROR,
+    INFO
 }
 

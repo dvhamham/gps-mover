@@ -16,9 +16,10 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- Favorites Page -->
-    <include
+    <com.hamham.gpsmover.favorites.FavoritesPage
         android:id="@+id/favorites_page"
-        layout="@layout/fragment_favorites"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/bottom_navigation"

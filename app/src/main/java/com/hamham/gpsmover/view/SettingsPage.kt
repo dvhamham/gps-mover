@@ -183,7 +183,6 @@ class SettingsPage @JvmOverloads constructor(
                 Snackbar.make(this, "Sign-in only available in Activity context", Snackbar.LENGTH_SHORT).show()
             }
             onAccountStateChanged?.invoke()
-            (context as? MapActivity)?.updateCloudButtonVisibility()
         }
 
         signOutButton.setOnClickListener {
@@ -220,7 +219,6 @@ class SettingsPage @JvmOverloads constructor(
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     setupAccountSection() // Refresh UI
-                    (context as? MapActivity)?.updateCloudButtonVisibility()
                 } else {
                     Snackbar.make(this, "Authentication Failed.", Snackbar.LENGTH_SHORT).show()
                 }

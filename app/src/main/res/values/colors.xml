@@ -35,4 +35,12 @@
 
     <!-- Success color (for success states) -->
     <color name="success">#22C55E</color>
+    <color name="switch_thumb_disabled_dark">#616161</color>
+    <color name="switch_track_normal_dark">#9E9E9E</color>
+
+    <!-- Snackbar Colors -->
+    <color name="success_green">#4CAF50</color>
+    <color name="error_red">#F44336</color>
+    <color name="info_blue">#2196F3</color>
+    <color name="white">#FFFFFF</color>
 </resources>
