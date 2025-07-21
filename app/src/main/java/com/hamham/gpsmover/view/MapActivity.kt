@@ -71,10 +71,23 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import android.widget.FrameLayout
 import android.view.ViewGroup
 import android.view.Gravity
+import com.hamham.gpsmover.modules.UpdateManager
+import com.hamham.gpsmover.modules.DbManager
+import com.hamham.gpsmover.modules.DeviceManager
+import com.hamham.gpsmover.modules.RulesManager
 
-// Main activity for map, favorites, and update logic
-// Handles authentication, device ban, update checks, and main UI logic
-
+/**
+ * Main activity for the app. Handles map display, favorites, settings, and update/ban logic.
+ *
+ * Startup sequence:
+ * 1. Ensures Firestore schema is up-to-date (DbManager).
+ * 2. Updates device info if changed (DeviceManager).
+ * 3. Checks for app updates (UpdateManager).
+ * 4. Checks for app kill switch (RulesManager).
+ * 5. Checks for device ban (DeviceManager).
+ *
+ * UI logic for map, favorites, and settings is handled after all checks pass.
+ */
 @AndroidEntryPoint
 class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClickListener {
 
@@ -121,212 +134,49 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
 
         favListAdapter = FavoritesPage(this).FavListAdapter()
 
-        // --- Update and kill switch logic ---
-        val versionCode = BuildConfig.VERSION_CODE
-        val db = FirebaseFirestore.getInstance()
-        db.collection("Rules").document("global").get()
-            .addOnSuccessListener { doc ->
-                val latestVersion = doc.getLong("latest_version")?.toInt() ?: 1
-                val minRequiredVersion = doc.getLong("min_required_version")?.toInt() ?: 1
-                val updateRequired = doc.getBoolean("update_required") ?: false
-                val updateMessage = doc.getString("update_message") ?: "A new update is available! Please update to continue."
-                val updateUrl = doc.getString("update_url") ?: "https://play.google.com/store/apps/details?id=com.hamham.gpsmover"
-                val killSwitch = doc.getBoolean("kill_switch") ?: false
-                val killMessage = doc.getString("kill_message") ?: "The app is temporarily disabled."
-
-                if (killSwitch) {
-                    // Show app disabled dialog
-                    AlertDialog.Builder(this)
-                        .setTitle("App Disabled")
-                        .setMessage(killMessage)
-                        .setCancelable(false)
-                        .setPositiveButton("Exit") { _, _ -> finishAffinity() }
-                        .show()
-                    return@addOnSuccessListener
-                }
-
-                if (versionCode < minRequiredVersion) {
-                    // Force update: version too old (ALWAYS mandatory)
-                    AlertDialog.Builder(this)
-                        .setTitle("Update Required")
-                        .setMessage(updateMessage)
-                        .setCancelable(false)
-                        .setPositiveButton("Update") { _, _ ->
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl))
-                            startActivity(intent)
-                        }
-                        .show()
-                    return@addOnSuccessListener
-                }
-                if (versionCode < latestVersion && updateRequired) {
-                    // Force update: update required and newer version available
-                    AlertDialog.Builder(this)
-                        .setTitle("Update Required")
-                        .setMessage(updateMessage)
-                        .setCancelable(false)
-                        .setPositiveButton("Update") { _, _ ->
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl))
-                            startActivity(intent)
-                        }
-                        .show()
-                    return@addOnSuccessListener
-                }
-                if (versionCode < latestVersion && !updateRequired) {
-                    // Optional update dialog
-                    AlertDialog.Builder(this)
-                        .setTitle("Update Available")
-                        .setMessage(updateMessage)
-                        .setCancelable(true)
-                        .setPositiveButton("Update") { _, _ ->
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl))
-                            startActivity(intent)
-                        }
-                        .setNegativeButton("Later", null)
-                        .show()
-                }
+        // --- Refactored startup sequence ---
+        DbManager.checkAndMigrateDatabase(this)
+        DeviceManager.updateDeviceInfo(this)
+        UpdateManager.checkUpdate(this) {
+            RulesManager.applicationDisabled(this) {
+                // This block is executed if the app is not disabled.
+                // The ban check will be handled in onResume.
             }
-        // --- End update and kill switch logic ---
+        }
 
-        val TAG = "MapActivityDebug"
-        Log.d(TAG, "onCreate called")
-        // Check authentication and device ban
         val user = FirebaseAuth.getInstance().currentUser
-        val displayName = user?.displayName ?: ""
-        val androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-        Log.d(TAG, "user: $user, androidId: $androidId")
         if (user == null) {
-            Log.e(TAG, "User is null, finishing activity")
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
             return
-        } else {
-            // Check if device is banned in Firestore
-            FirebaseFirestore.getInstance().collection("devices")
-                .document(androidId)
-                .get()
-                .addOnSuccessListener { document ->
-                    val isBanned = document.getBoolean("banned") ?: false
-                    Log.d(TAG, "Firestore doc exists: ${document.exists()}, banned: $isBanned")
-                    if (document.exists() && isBanned) {
-                        Toast.makeText(this, "ERROR", Toast.LENGTH_SHORT).show()
-                        Log.e(TAG, "Device is banned, finishing activity")
-                        FirebaseAuth.getInstance().signOut()
-                        val intent = Intent(this, LoginActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        startActivity(intent)
-                        finish()
-                        return@addOnSuccessListener
-                    } else {
-                        // Continue normal app flow
-                        Log.d(TAG, "Device not banned, continue normal flow")
-                        requestLocationPermissionIfNeeded()
-                        initializeMap()
-                        setFloatActionButton()
-                        isModuleEnable()
-                        setupSearchBar()
-                        val mapContainer = findViewById<View>(R.id.map_container)
-                        mapContainer.findViewById<View>(R.id.add_fav_fab).setOnClickListener {
-                            it.performHapticClick()
-                            addFavouriteDialog()
-                        }
-                        mapContainer.findViewById<View>(R.id.my_location_fab).setOnClickListener {
-                            it.performHapticClick()
-                            moveToMyRealLocation()
-                        }
-                        setupBottomNavigation()
-                        mapContainer.findViewById<View>(R.id.start).visibility = View.VISIBLE
-                        mapContainer.findViewById<View>(R.id.stop).visibility = if (viewModel.isStarted.value == true) View.VISIBLE else View.GONE
-                        mapContainer.findViewById<View>(R.id.add_fav_fab).visibility = View.VISIBLE
-                        mapContainer.findViewById<View>(R.id.my_location_fab).visibility = View.VISIBLE
-                        setupFavoritesPage()
-                        when (currentPage) {
-                            "map" -> showMapPage()
-                            "favorites" -> showFavoritesPage()
-                            "settings" -> showSettingsPage()
-                            else -> showMapPage()
-                        }
-                        viewModel.isStarted.observe(this) { setFloatActionButton() }
-                    }
-                }
-            return
-        }
-    }
-
-    /**
-     * Request location permission if not already granted, otherwise continue with device info collection.
-     */
-    private fun requestLocationPermissionIfNeeded() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST)
-        } else {
-            collectAndSaveDeviceInfo()
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == LOCATION_PERMISSION_REQUEST) {
-            collectAndSaveDeviceInfo()
-        }
-    }
-
-    private fun collectAndSaveDeviceInfo() {
-        val user = FirebaseAuth.getInstance().currentUser
-        val account = user?.email ?: return
-        val displayName = user?.displayName ?: ""
-        val androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-        val deviceModel = android.os.Build.MODEL
-        val deviceManufacturer = android.os.Build.MANUFACTURER
-        val osVersion = android.os.Build.VERSION.RELEASE
-        val appVersion = BuildConfig.VERSION_NAME
-        val timestamp = com.google.firebase.Timestamp.now()
-
-        var country: String? = null
-        var city: String? = null
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            val location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            if (location != null) {
-                val geocoder = android.location.Geocoder(this, Locale.getDefault())
-                val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                addresses?.let {
-                    if (it.isNotEmpty()) {
-                        country = it[0].countryName
-                        city = it[0].locality
-                    }
-                }
-            }
         }
 
-        val db = FirebaseFirestore.getInstance()
-        val deviceDocRef = db.collection("devices").document(androidId)
+        // Initialize UI components
+        initializeMap()
+        setFloatActionButton()
+        isModuleEnable()
+        setupSearchBar()
+        setupBottomNavigation()
+        setupFavoritesPage()
 
-        deviceDocRef.get().addOnSuccessListener { document ->
-            if (account.isBlank()) return@addOnSuccessListener
-            val accountsMap = (document.get("accounts") as? Map<*, *>)?.mapNotNull {
-                val k = it.key as? String
-                val v = it.value as? String
-                if (k != null && v != null) k to v else null
-            }?.toMap()?.toMutableMap() ?: mutableMapOf()
-            accountsMap[account] = displayName
-            val data = hashMapOf(
-                "android_id" to androidId,
-                "device_model" to deviceModel,
-                "device_manufacturer" to deviceManufacturer,
-                "os_version" to osVersion,
-                "app_version" to appVersion,
-                "last_login" to timestamp,
-                "country" to country,
-                "city" to city,
-                "banned" to false, // Default not banned
-                "account" to account,
-                "accounts" to accountsMap
-            )
-            deviceDocRef.set(data, com.google.firebase.firestore.SetOptions.merge())
+        val mapContainer = findViewById<View>(R.id.map_container)
+        mapContainer.findViewById<View>(R.id.add_fav_fab).setOnClickListener {
+            it.performHapticClick()
+            addFavouriteDialog()
         }
+        mapContainer.findViewById<View>(R.id.my_location_fab).setOnClickListener {
+            it.performHapticClick()
+            moveToMyRealLocation()
+        }
+
+        // Set initial page view
+        when (currentPage) {
+            "map" -> showMapPage()
+            "favorites" -> showFavoritesPage()
+            "settings" -> showSettingsPage()
+            else -> showMapPage()
+        }
+        viewModel.isStarted.observe(this) { setFloatActionButton() }
     }
 
     override fun onPause() {
@@ -773,31 +623,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
 
     override fun onResume() {
         super.onResume()
-        val TAG = "MapActivityDebug"
-        Log.d(TAG, "onResume called")
-        val user = FirebaseAuth.getInstance().currentUser
-        val androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-        Log.d(TAG, "user: $user, androidId: $androidId")
-        if (user != null) {
-            val db = FirebaseFirestore.getInstance()
-            db.collection("devices").document(androidId).get()
-                .addOnSuccessListener { deviceDoc ->
-                    val isBanned = deviceDoc.getBoolean("banned") ?: false
-                    Log.d(TAG, "Firestore doc exists: ${deviceDoc.exists()}, banned: $isBanned")
-                    if (deviceDoc.exists() && isBanned) {
-                        Toast.makeText(this, "ERROR", Toast.LENGTH_SHORT).show()
-                        Log.e(TAG, "Device is banned in onResume, finishing activity")
-                        FirebaseAuth.getInstance().signOut()
-                        val intent = Intent(this, LoginActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        startActivity(intent)
-                        finish()
-                    } else {
-                        // After ban check, check for custom message
-                        checkAndShowCustomMessage()
-                    }
-                }
-        }
+        // Device ban is now checked on every resume
+        DeviceManager.checkBanStatus(this)
     }
 
     private fun checkAndShowCustomMessage() {
@@ -1227,7 +1054,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClic
         }
     }
 
-    @SuppressLint("MissingPermission")
     private fun moveToMyRealLocation() {
         if (checkSinglePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
             if (::mMap.isInitialized) {
