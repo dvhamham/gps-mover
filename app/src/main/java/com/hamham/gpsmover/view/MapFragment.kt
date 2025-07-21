@@ -57,10 +57,9 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMapClickListener
         // Observe moveToLatLng to move map when a favorite is clicked
         viewModel.moveToLatLng.observe(viewLifecycleOwner) { latLng ->
             if (latLng != null && ::mMap.isInitialized) {
-                lat = latLng.latitude
-                lon = latLng.longitude
-                mLatLng = latLng
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15.0f))
+                val targetZoom = 3.0f
+                android.widget.Toast.makeText(requireContext(), "Moving to: ${latLng.latitude}, ${latLng.longitude} zoom: $targetZoom", android.widget.Toast.LENGTH_SHORT).show()
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, targetZoom))
                 if (mMarker == null) {
                     mMarker = mMap.addMarker(
                         MarkerOptions().position(latLng).draggable(false)
@@ -71,6 +70,9 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMapClickListener
                     mMarker?.isVisible = true
                 }
                 mMarker?.showInfoWindow()
+                viewModel.lastCameraLatLng = latLng
+                viewModel.lastCameraZoom = targetZoom
+                viewModel._justMovedToFavorite = true
             }
         }
     }
@@ -203,16 +205,21 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMapClickListener
         mMap = googleMap
         with(mMap) {
             mapType = viewModel.mapType
-            val zoom = 12.0f
-            lat = viewModel.getLat
-            lon = viewModel.getLng
-            mLatLng = LatLng(lat, lon)
-            mLatLng?.let {
-                mMarker = addMarker(
-                    MarkerOptions().position(it).draggable(false)
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)).visible(false)
-                )
-                animateCamera(CameraUpdateFactory.newLatLngZoom(it, zoom))
+            val targetLatLng = viewModel.lastCameraLatLng ?: LatLng(viewModel.getLat, viewModel.getLng)
+            val targetZoom = viewModel.lastCameraZoom ?: 12.0f
+            mLatLng = targetLatLng
+            lat = targetLatLng.latitude
+            lon = targetLatLng.longitude
+            mMarker = addMarker(
+                MarkerOptions().position(targetLatLng).draggable(false)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)).visible(false)
+            )
+            // إذا كان هناك انتقال لمفضلة للتو، لا تحرك الكاميرا إطلاقًا
+            if (viewModel._justMovedToFavorite) {
+                viewModel._justMovedToFavorite = false
+                // لا تحرك الكاميرا إطلاقًا
+            } else {
+                moveCamera(CameraUpdateFactory.newLatLngZoom(targetLatLng, targetZoom))
             }
             uiSettings.isZoomControlsEnabled = false
             uiSettings.isMyLocationButtonEnabled = false
@@ -226,6 +233,11 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMapClickListener
             if (viewModel.isStarted.value == true) {
                 mMarker?.isVisible = true
                 mMarker?.showInfoWindow()
+            }
+            setOnCameraIdleListener {
+                val pos = mMap.cameraPosition
+                viewModel.lastCameraLatLng = pos.target
+                viewModel.lastCameraZoom = pos.zoom
             }
             // Move to favorite location if requested
             viewModel.moveToLatLng.value?.let { favLatLng ->

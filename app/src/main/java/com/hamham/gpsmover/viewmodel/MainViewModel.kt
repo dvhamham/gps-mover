@@ -233,6 +233,10 @@ class MainViewModel @Inject constructor(
         moveToLatLng.value = LatLng(lat, lng)
     }
 
+    var lastCameraLatLng: LatLng? = null
+    var lastCameraZoom: Float? = null
+    var _justMovedToFavorite: Boolean = false
+
     init {
         startRealtimeFavoritesSync()
     }

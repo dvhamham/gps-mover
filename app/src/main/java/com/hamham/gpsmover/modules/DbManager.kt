@@ -103,7 +103,6 @@ object DbManager {
             DeviceKeys.COUNTRY to "",
             DeviceKeys.CITY to ""
         ),
-        DeviceKeys.ANDROID_ID to "",
         DeviceKeys.APP_VERSION to "",
         DeviceKeys.BANNED to false,
         DeviceKeys.CURRENT_ACCOUNT to "",

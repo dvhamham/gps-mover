@@ -30,4 +30,6 @@ class App : Application() {
         commonInit()
         AppCompatDelegate.setDefaultNightMode(PrefManager.darkTheme)
     }
+
+    
 }
