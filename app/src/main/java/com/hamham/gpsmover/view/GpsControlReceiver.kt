@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.hamham.gpsmover.xposed.PrefManager
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
 
 class GpsControlReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

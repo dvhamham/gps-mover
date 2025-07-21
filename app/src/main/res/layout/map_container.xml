@@ -108,7 +108,9 @@
                 android:src="@drawable/ic_baseline_play_arrow_24"
                 app:backgroundTint="@color/secondary"
                 app:tint="@color/onSecondary"
-                android:tint="@color/onSecondary" />
+                android:tint="@color/onSecondary"
+                app:strokeColor="@color/primary"
+                app:strokeWidth="2dp" />
 
             <!-- Stop FAB (red) -->
             <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -120,7 +122,9 @@
                 android:visibility="gone"
                 app:backgroundTint="@color/error"
                 app:tint="@color/onError"
-                android:tint="@color/onError" />
+                android:tint="@color/onError"
+                app:strokeColor="@color/primary"
+                app:strokeWidth="2dp" />
 
         </FrameLayout>
     </LinearLayout>
