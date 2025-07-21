@@ -14,5 +14,6 @@
         <item name="colorOutline">@color/outline</item>
         <item name="android:navigationBarColor">@color/primary</item>
         <item name="colorTertiary">@color/tertiary</item>
+        <item name="android:windowBackground">@color/background</item>
     </style>
 </resources>

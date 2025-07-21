@@ -26,25 +26,21 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_login)
-
         auth = FirebaseAuth.getInstance()
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id))
             .requestEmail()
             .build()
         googleSignInClient = GoogleSignIn.getClient(this, gso)
-
-        val loginButton = findViewById<MaterialButton>(R.id.login_button)
-        loginButton.setOnClickListener {
-            googleSignInClient.signOut().addOnCompleteListener {
-                googleSignInClient.revokeAccess().addOnCompleteListener {
-                    val signInIntent = googleSignInClient.signInIntent
-                    signInIntent.putExtra("override_account", null as String?)
-                    startActivityForResult(signInIntent, RC_SIGN_IN)
-                }
-            }
+        if (auth.currentUser != null) {
+            startActivity(Intent(this, MapActivity::class.java))
+            finish()
+            return
         }
+        // انتظر 10 ثوانٍ ثم أظهر الديلوك
+        window.decorView.postDelayed({
+            showLoginDialog()
+        }, 10000)
     }
 
     private fun requestLocationPermission() {
@@ -150,5 +146,25 @@ class LoginActivity : AppCompatActivity() {
                     Toast.makeText(this, "Authentication Failed.", Toast.LENGTH_SHORT).show()
                 }
             }
+    }
+
+    private fun showLoginDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_login, null)
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+        dialog.setCanceledOnTouchOutside(false)
+        val loginButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.login_button)
+        loginButton.setOnClickListener {
+            googleSignInClient.signOut().addOnCompleteListener {
+                googleSignInClient.revokeAccess().addOnCompleteListener {
+                    val signInIntent = googleSignInClient.signInIntent
+                    signInIntent.putExtra("override_account", null as String?)
+                    startActivityForResult(signInIntent, RC_SIGN_IN)
+                }
+            }
+        }
+        dialog.show()
     }
 } 

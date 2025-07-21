@@ -17,6 +17,12 @@ import com.hamham.gpsmover.modules.RulesManager
 import com.hamham.gpsmover.modules.UpdateManager
 import com.hamham.gpsmover.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.auth.GoogleAuthProvider
+import android.app.AlertDialog
+import android.view.LayoutInflater
 
 @AndroidEntryPoint
 class MapActivity : AppCompatActivity() {
@@ -24,12 +30,26 @@ class MapActivity : AppCompatActivity() {
     private val binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
     val viewModel by viewModels<MainViewModel>()
     private var currentPage = "map"
+    private lateinit var googleSignInClient: GoogleSignInClient
+    private lateinit var loginDialog: AlertDialog
+    private var xposedDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Configure the system window for modern edge-to-edge design
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(binding.root)
+        // حمّل الخريطة مباشرة
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.map_fragment_container, MapFragment(), "MapFragment")
+                .commit()
+        }
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
         // --- Startup sequence ---
         // 1. Check for mandatory or optional app updates
         UpdateManager.checkUpdate(this) {
@@ -38,23 +58,18 @@ class MapActivity : AppCompatActivity() {
             // 3. Update device information in the database
             DeviceManager.updateDeviceInfo(this)
             // 4. Check for a global app ban (kill switch)
-            RulesManager.applicationDisabled(this) {}
+            RulesManager.applicationDisabled(this) {
+                setupBottomNavigation()
+                checkXposedModule()
+                // بعد 5 ثوانٍ تحقق من المستخدم
+                window.decorView.postDelayed({
+                    val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                    if (user == null) {
+                        showLoginDialog()
+                    }
+                }, 5000)
+            }
         }
-        // 5. Check if the user is logged in
-        val user = FirebaseAuth.getInstance().currentUser
-        if (user == null) {
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
-            return
-        }
-        // 6. Load the map page as the default Fragment on first launch
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.map_fragment_container, MapFragment(), "MapFragment")
-                .commit()
-        }
-        // 7. Initialize the bottom navigation bar
-        setupBottomNavigation()
     }
 
     override fun onResume() {
@@ -106,6 +121,78 @@ class MapActivity : AppCompatActivity() {
             "favorites" -> bottomNavigation.selectedItemId = R.id.navigation_favorites
             "settings" -> bottomNavigation.selectedItemId = R.id.navigation_settings
             else -> bottomNavigation.selectedItemId = R.id.navigation_map
+        }
+    }
+
+    private fun promptLoginIfNeeded() {
+        val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        if (user == null) {
+            // انتظر 10 ثوانٍ ثم انتقل إلى LoginActivity
+            window.decorView.postDelayed({
+                val userCheck = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                if (userCheck == null) {
+                    startActivity(Intent(this, LoginActivity::class.java))
+                    finish()
+                }
+            }, 10000)
+        }
+    }
+
+    private fun showLoginDialog() {
+        // تحقق أولاً من تفعيل Xposed/LSPosed
+        if (!com.hamham.gpsmover.xposed.XposedSelfHooks.isXposedModuleEnabled()) {
+            checkXposedModule()
+            return
+        }
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_login, null)
+        loginDialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+        loginDialog.setCanceledOnTouchOutside(false)
+        val loginButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.login_button)
+        loginButton.setOnClickListener {
+            googleSignInClient.signOut().addOnCompleteListener {
+                googleSignInClient.revokeAccess().addOnCompleteListener {
+                    val signInIntent = googleSignInClient.signInIntent
+                    signInIntent.putExtra("override_account", null as String?)
+                    startActivityForResult(signInIntent, 9001)
+                }
+            }
+        }
+        loginDialog.show()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 9001) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+            try {
+                val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
+                val credential = GoogleAuthProvider.getCredential(account.idToken!!, null)
+                com.google.firebase.auth.FirebaseAuth.getInstance().signInWithCredential(credential)
+                    .addOnCompleteListener(this) { task ->
+                        if (task.isSuccessful) {
+                            loginDialog.dismiss()
+                            // يمكنك هنا تحديث الواجهة أو إعادة تحميل البيانات إذا لزم الأمر
+                        } else {
+                            android.widget.Toast.makeText(this, "Authentication Failed.", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(this, "Sign-in failed: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun checkXposedModule() {
+        if (xposedDialog?.isShowing == true) return
+        if (!com.hamham.gpsmover.xposed.XposedSelfHooks.isXposedModuleEnabled()) {
+            xposedDialog = AlertDialog.Builder(this)
+                .setTitle("LSPosed/Xposed Not Active")
+                .setMessage("You must enable the LSPosed/Xposed module for GPS Mover to work.\nPlease enable the module and reboot your device.")
+                .setCancelable(false)
+                .show()
         }
     }
 }
