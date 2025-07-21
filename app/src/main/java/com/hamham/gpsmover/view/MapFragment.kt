@@ -73,6 +73,10 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMapClickListener
                 viewModel.lastCameraLatLng = latLng
                 viewModel.lastCameraZoom = targetZoom
                 viewModel._justMovedToFavorite = true
+                lat = latLng.latitude
+                lon = latLng.longitude
+                mLatLng = latLng
+                com.hamham.gpsmover.xposed.PrefManager.update(false, lat, lon)
             }
         }
     }
@@ -267,6 +271,8 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMapClickListener
             mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng))
             lat = latLng.latitude
             lon = latLng.longitude
+            // حفظ الإحداثيات في PrefManager
+            com.hamham.gpsmover.xposed.PrefManager.update(false, lat, lon)
         }
     }
 
@@ -279,6 +285,8 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMapClickListener
                 isVisible = true
                 showInfoWindow()
             }
+            // حفظ الإحداثيات
+            com.hamham.gpsmover.xposed.PrefManager.update(false, latLng.latitude, latLng.longitude)
         }
     }
 } 

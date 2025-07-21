@@ -41,10 +41,10 @@ object PrefManager {
         get() = pref.getBoolean(START, false)
 
     val getLat: Double
-        get() = pref.getFloat(LATITUDE, 40.7128f).toDouble()
+        get() = pref.getFloat(LATITUDE, 33.6188088f).toDouble() // الدار البيضاء الجديدة
 
     val getLng: Double
-        get() = pref.getFloat(LONGITUDE, -74.0060f).toDouble()
+        get() = pref.getFloat(LONGITUDE, -7.4636493f).toDouble() // الدار البيضاء الجديدة
 
     var isHookSystem: Boolean
         get() = pref.getBoolean(HOOKED_SYSTEM, true)
