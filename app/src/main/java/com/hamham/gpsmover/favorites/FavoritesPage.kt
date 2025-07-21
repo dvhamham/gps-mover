@@ -31,7 +31,7 @@ class FavoritesPage @JvmOverloads constructor(
     private var favoritesJob: Job? = null
 
     init {
-        LayoutInflater.from(context).inflate(R.layout.fragment_favorites, this, true)
+        LayoutInflater.from(context).inflate(R.layout.favorites_page, this, true)
         setupRecyclerView()
     }
 

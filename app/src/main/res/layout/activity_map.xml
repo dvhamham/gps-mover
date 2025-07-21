@@ -6,9 +6,10 @@
     android:fitsSystemWindows="true">
 
     <!-- Map Container -->
-    <include
-        android:id="@+id/map_container"
-        layout="@layout/map_container"
+    <FrameLayout
+        android:id="@+id/map_fragment_container"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:visibility="visible"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/bottom_navigation"
