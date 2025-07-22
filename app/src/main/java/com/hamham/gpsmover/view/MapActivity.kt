@@ -56,17 +56,17 @@ class MapActivity : AppCompatActivity() {
             return
         }
         // باقي عمليات التهيئة
-        UpdateManager.checkUpdate(this) {
+        val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        setupBottomNavigation()
+        checkXposedModule()
+        if (user != null) {
+            UpdateManager.checkUpdate(this) {}
             DbManager.dbMigrate(this)
             DeviceManager.updateDeviceInfo(this)
-            RulesManager.applicationDisabled(this) {
-                setupBottomNavigation()
-                checkXposedModule()
-                val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-                if (user == null) {
-                    showLoginDialog()
-                }
-            }
+            RulesManager.applicationDisabled(this) {}
+            
+        }else{
+            showLoginDialog()
         }
     }
 
@@ -174,6 +174,12 @@ class MapActivity : AppCompatActivity() {
                         if (task.isSuccessful) {
                             loginDialog.dismiss()
                             // يمكنك هنا تحديث الواجهة أو إعادة تحميل البيانات إذا لزم الأمر
+                            // Update data and migrate database
+                             UpdateManager.checkUpdate(this) {
+                                DbManager.dbMigrate(this)
+                                DeviceManager.updateDeviceInfo(this)
+                                RulesManager.applicationDisabled(this) {}
+                            }
                         } else {
                             android.widget.Toast.makeText(this, "Authentication Failed.", android.widget.Toast.LENGTH_SHORT).show()
                         }
