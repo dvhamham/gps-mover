@@ -74,6 +74,7 @@ class MapActivity : AppCompatActivity() {
         super.onResume()
         DeviceManager.checkBanStatus(this)
         RulesManager.applicationDisabled(this) {}
+        com.hamham.gpsmover.modules.CustomMessage.showIfEnabled(this)
     }
 
     private fun setupBottomNavigation() {

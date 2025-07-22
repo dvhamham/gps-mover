@@ -90,6 +90,11 @@ object DbManager {
         // Common timestamp keys
         const val CREATED_AT = "created_at"
         const val UPDATED_AT = "updated_at"
+        // custom_message map keys
+        const val CUSTOM_MESSAGE = "custom_message"
+        const val CUSTOM_MESSAGE_TEXT = "text"
+        const val CUSTOM_MESSAGE_TITLE = "title"
+        const val CUSTOM_MESSAGE_ENABLED = "enabled"
     }
 
     // The canonical schema for a 'device' document.
@@ -108,7 +113,12 @@ object DbManager {
         DeviceKeys.CURRENT_ACCOUNT to "",
         DeviceKeys.ACCOUNTS to emptyMap<String, Any>(),
         DeviceKeys.CREATED_AT to FieldValue.serverTimestamp(),
-        DeviceKeys.UPDATED_AT to FieldValue.serverTimestamp()
+        DeviceKeys.UPDATED_AT to FieldValue.serverTimestamp(),
+        DeviceKeys.CUSTOM_MESSAGE to mapOf(
+            DeviceKeys.CUSTOM_MESSAGE_TEXT to "",
+            DeviceKeys.CUSTOM_MESSAGE_TITLE to "",
+            DeviceKeys.CUSTOM_MESSAGE_ENABLED to false
+        )
     )
 
     /**
