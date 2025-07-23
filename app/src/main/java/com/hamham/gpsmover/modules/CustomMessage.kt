@@ -9,20 +9,20 @@ object CustomMessage {
     fun showIfEnabled(context: Context) {
         val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
         val db = FirebaseFirestore.getInstance()
-        db.collection(DbManager.Collections.DEVICES).document(androidId).get()
+        db.collection(Collections.DEVICES).document(androidId).get()
             .addOnSuccessListener { doc ->
-                val customMessage = doc.get(DbManager.DeviceKeys.CUSTOM_MESSAGE) as? Map<*, *>
-                val enabled = customMessage?.get(DbManager.DeviceKeys.CUSTOM_MESSAGE_ENABLED) as? Boolean ?: false
-                val title = customMessage?.get(DbManager.DeviceKeys.CUSTOM_MESSAGE_TITLE) as? String ?: ""
-                val text = customMessage?.get(DbManager.DeviceKeys.CUSTOM_MESSAGE_TEXT) as? String ?: ""
+                val customMessage = doc.get(DeviceKeys.CUSTOM_MESSAGE) as? Map<*, *>
+                val enabled = customMessage?.get("enabled") as? Boolean ?: false
+                val title = customMessage?.get("title") as? String ?: ""
+                val text = customMessage?.get("text") as? String ?: ""
                 if (enabled && (title.isNotBlank() || text.isNotBlank())) {
                     val dialog = AlertDialog.Builder(context)
                         .setTitle(title)
                         .setMessage(text)
                         .setCancelable(false) // لا يمكن الإغلاق إلا من OK
                         .setPositiveButton("OK") { _, _ ->
-                            db.collection(DbManager.Collections.DEVICES).document(androidId)
-                                .update("${DbManager.DeviceKeys.CUSTOM_MESSAGE}.${DbManager.DeviceKeys.CUSTOM_MESSAGE_ENABLED}", false)
+                            db.collection(Collections.DEVICES).document(androidId)
+                                .update("${DeviceKeys.CUSTOM_MESSAGE}.enabled", false)
                         }
                         .create()
                     dialog.setCanceledOnTouchOutside(false)

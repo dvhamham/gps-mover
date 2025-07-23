@@ -4,8 +4,6 @@ import android.app.AlertDialog
 import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore
 import com.hamham.gpsmover.BuildConfig
-import com.hamham.gpsmover.modules.DbManager.Collections
-import com.hamham.gpsmover.modules.DbManager.RulesKeys
 
 /**
  * Handles checking for application updates by fetching configuration from Firestore.
@@ -26,8 +24,8 @@ object UpdateManager {
         val versionCode = BuildConfig.VERSION_CODE
         val db = FirebaseFirestore.getInstance()
 
-        // Fetch the remote configuration from the 'rules' document in the 'global' collection.
-        db.collection(Collections.GLOBAL).document("rules").get()
+        // Fetch the remote configuration from the 'rules' document in the 'application' collection.
+        db.collection(Collections.APPLICATION).document("rules").get()
             .addOnSuccessListener { doc ->
                 // If the document doesn't exist, there are no rules to apply.
                 if (!doc.exists()) {

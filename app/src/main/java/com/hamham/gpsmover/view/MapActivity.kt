@@ -11,9 +11,8 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
 import com.hamham.gpsmover.R
 import com.hamham.gpsmover.databinding.ActivityMapBinding
-import com.hamham.gpsmover.modules.DbManager
-import com.hamham.gpsmover.modules.DeviceManager
-import com.hamham.gpsmover.modules.RulesManager
+import com.hamham.gpsmover.AppInitializer
+import com.hamham.gpsmover.modules.CollectionsManager
 import com.hamham.gpsmover.modules.UpdateManager
 import com.hamham.gpsmover.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -36,6 +35,7 @@ class MapActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
         // Configure the system window for modern edge-to-edge design
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(binding.root)
@@ -60,61 +60,79 @@ class MapActivity : AppCompatActivity() {
         setupBottomNavigation()
         checkXposedModule()
         if (user != null) {
-            UpdateManager.checkUpdate(this) {}
-            DbManager.dbMigrate(this)
-            DeviceManager.updateDeviceInfo(this)
-            RulesManager.applicationDisabled(this) {}
-            
-        }else{
+            AppInitializer.initializeAppData(this)
+            // Initialize database collections and schema once only
+            CollectionsManager.initializeCollections(this)
+        } else {
+            // Initialize basic collections structure even without user
+            CollectionsManager.initializeCollections(this)
             showLoginDialog()
         }
     }
 
     override fun onResume() {
         super.onResume()
-        DeviceManager.checkBanStatus(this)
-        RulesManager.applicationDisabled(this) {}
+        // Re-setup bottom navigation in case it was broken during logout/login cycle
+        setupBottomNavigation()
+        // Check comprehensive app status (killall and device ban)
+        CollectionsManager.checkAppStatus(this)
         com.hamham.gpsmover.modules.CustomMessage.showIfEnabled(this)
     }
 
     private fun setupBottomNavigation() {
         val bottomNavigation = findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        
+        // Clear any existing listeners to prevent conflicts
+        bottomNavigation.setOnItemSelectedListener(null)
+        
+        // Set up the listener again
         bottomNavigation.setOnItemSelectedListener { menuItem ->
             bottomNavigation.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
             when (menuItem.itemId) {
                 R.id.navigation_map -> {
-                    supportFragmentManager.beginTransaction()
-                        .setCustomAnimations(
-                            R.anim.fade_in, R.anim.fade_out,
-                            R.anim.fade_in, R.anim.fade_out
-                        )
-                        .replace(R.id.map_fragment_container, MapFragment(), "MapFragment")
-                        .commit()
+                    if (supportFragmentManager.findFragmentByTag("MapFragment") == null) {
+                        supportFragmentManager.beginTransaction()
+                            .setCustomAnimations(
+                                R.anim.fade_in, R.anim.fade_out,
+                                R.anim.fade_in, R.anim.fade_out
+                            )
+                            .replace(R.id.map_fragment_container, MapFragment(), "MapFragment")
+                            .commit()
+                    }
+                    currentPage = "map"
                     true
                 }
                 R.id.navigation_favorites -> {
-                    supportFragmentManager.beginTransaction()
-                        .setCustomAnimations(
-                            R.anim.fade_in, R.anim.fade_out,
-                            R.anim.fade_in, R.anim.fade_out
-                        )
-                        .replace(R.id.map_fragment_container, FavoritesFragment(), "FavoritesFragment")
-                        .commit()
+                    if (supportFragmentManager.findFragmentByTag("FavoritesFragment") == null) {
+                        supportFragmentManager.beginTransaction()
+                            .setCustomAnimations(
+                                R.anim.fade_in, R.anim.fade_out,
+                                R.anim.fade_in, R.anim.fade_out
+                            )
+                            .replace(R.id.map_fragment_container, FavoritesFragment(), "FavoritesFragment")
+                            .commit()
+                    }
+                    currentPage = "favorites"
                     true
                 }
                 R.id.navigation_settings -> {
-                    supportFragmentManager.beginTransaction()
-                        .setCustomAnimations(
-                            R.anim.fade_in, R.anim.fade_out,
-                            R.anim.fade_in, R.anim.fade_out
-                        )
-                        .replace(R.id.map_fragment_container, SettingsFragment(), "SettingsFragment")
-                        .commit()
+                    if (supportFragmentManager.findFragmentByTag("SettingsFragment") == null) {
+                        supportFragmentManager.beginTransaction()
+                            .setCustomAnimations(
+                                R.anim.fade_in, R.anim.fade_out,
+                                R.anim.fade_in, R.anim.fade_out
+                            )
+                            .replace(R.id.map_fragment_container, SettingsFragment(), "SettingsFragment")
+                            .commit()
+                    }
+                    currentPage = "settings"
                     true
                 }
                 else -> false
             }
         }
+        
+        // Set initial selected item
         when (currentPage) {
             "map" -> bottomNavigation.selectedItemId = R.id.navigation_map
             "favorites" -> bottomNavigation.selectedItemId = R.id.navigation_favorites
@@ -173,13 +191,12 @@ class MapActivity : AppCompatActivity() {
                     .addOnCompleteListener(this) { task ->
                         if (task.isSuccessful) {
                             loginDialog.dismiss()
-                            // يمكنك هنا تحديث الواجهة أو إعادة تحميل البيانات إذا لزم الأمر
-                            // Update data and migrate database
-                             UpdateManager.checkUpdate(this) {
-                                DbManager.dbMigrate(this)
-                                DeviceManager.updateDeviceInfo(this)
-                                RulesManager.applicationDisabled(this) {}
-                            }
+                            // Initialize app data after successful login
+                            AppInitializer.initializeAppData(this)
+                            // Update database with new user information - only on first successful login
+                            CollectionsManager.onUserLoginSuccess(this)
+                            // Re-setup bottom navigation after login to ensure it works properly
+                            setupBottomNavigation()
                         } else {
                             android.widget.Toast.makeText(this, "Authentication Failed.", android.widget.Toast.LENGTH_SHORT).show()
                         }

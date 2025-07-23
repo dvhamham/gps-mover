@@ -167,7 +167,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMapClickListener
             } else {
                 val fav = com.hamham.gpsmover.favorites.Favourite(
                     id = System.currentTimeMillis(),
-                    address = s,
+                    name = s,
                     lat = lat,
                     lng = lon,
                     order = viewModel.allFavList.value.size

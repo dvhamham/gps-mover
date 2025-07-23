@@ -66,7 +66,7 @@ class FavListAdapter : RecyclerView.Adapter<FavListAdapter.ViewHolder>() {
         }
 
         fun bind(favourite: Favourite) {
-            address.text = favourite.address
+            address.text = favourite.name
             val lat = String.format("%.6f", favourite.lat)
             val lng = String.format("%.6f", favourite.lng)
             coords.text = "$lat, $lng"

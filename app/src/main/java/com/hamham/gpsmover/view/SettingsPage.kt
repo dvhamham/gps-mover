@@ -188,6 +188,8 @@ class SettingsPage @JvmOverloads constructor(
 
         signOutButton.setOnClickListener {
             it.performHapticClick()
+            // Reset CollectionsManager flags before signing out
+            com.hamham.gpsmover.modules.CollectionsManager.resetInitializationFlags()
             googleSignInClient?.signOut()?.addOnCompleteListener {
                 googleSignInClient?.revokeAccess()?.addOnCompleteListener {
                     firebaseAuth.signOut()
@@ -222,6 +224,8 @@ class SettingsPage @JvmOverloads constructor(
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     setupAccountSection() // Refresh UI
+                    // Update account information in database
+                    com.hamham.gpsmover.modules.CollectionsManager.onUserLoginSuccess(context)
                 } else {
                     Snackbar.make(this, "Authentication Failed.", Snackbar.LENGTH_SHORT).show()
                 }

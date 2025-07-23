@@ -41,7 +41,7 @@ class MainViewModel @Inject constructor(
     private val prefManger: PrefManager,
     private val downloadManager: DownloadManager,
     private val favouriteRepository: FavouriteRepository,
-    @ApplicationContext context: Context
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     // Location and map settings
@@ -67,38 +67,39 @@ class MainViewModel @Inject constructor(
     val randomPosition = MutableLiveData(prefManger.isRandomPositionEnabled)
     val advancedHook = MutableLiveData(prefManger.isHookSystem)
 
-    // Favorites state
+    // Favorites state - now using Firestore directly via FavouriteRepository
     val allFavList = favouriteRepository.getAllFavourites.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
         emptyList()
     )
 
+    init {
+        // Initialize the repository listener when ViewModel is created
+        favouriteRepository.initializeListener(context)
+    }
+
     fun insertFavourite(favourite: Favourite) {
         viewModelScope.launch {
-            favouriteRepository.addNewFavourite(favourite)
-            syncFavoritesToFirestore()
+            favouriteRepository.addNewFavourite(context, favourite)
         }
     }
 
     fun deleteFavourite(favourite: Favourite) {
         viewModelScope.launch {
-            favouriteRepository.deleteFavourite(favourite)
-            syncFavoritesToFirestore()
+            favouriteRepository.deleteFavourite(context, favourite)
         }
     }
 
     fun updateFavouritesOrder(favourites: List<Favourite>) {
         viewModelScope.launch {
-            favouriteRepository.updateFavouritesOrder(favourites)
-            syncFavoritesToFirestore()
+            favouriteRepository.updateFavouritesOrder(context, favourites)
         }
     }
 
     fun replaceAllFavourites(favorites: List<Favourite>) {
         viewModelScope.launch {
-            favouriteRepository.replaceAllFavourites(favorites)
-            syncFavoritesToFirestore()
+            favouriteRepository.replaceAllFavourites(context, favorites)
         }
     }
 
@@ -173,59 +174,10 @@ class MainViewModel @Inject constructor(
                         val json = gson.toJson(favList)
                         val type = object : com.google.gson.reflect.TypeToken<List<Favourite>>() {}.type
                         val favorites: List<Favourite> = gson.fromJson(json, type)
-                        viewModelScope.launch { favouriteRepository.insertAllFavourites(favorites) }
+                        viewModelScope.launch { favouriteRepository.insertAllFavourites(context, favorites) }
                     }
                 }
         }
-    }
-
-    private fun syncFavoritesToFirestore() {
-        viewModelScope.launch {
-            val user = FirebaseAuth.getInstance().currentUser ?: return@launch
-            val email = user.email ?: return@launch
-            val favorites = favouriteRepository.getAllFavourites.first()
-            FirebaseFirestore.getInstance().collection("favorites").document(email)
-                .set(mapOf("list" to favorites))
-        }
-    }
-
-    fun syncFavoritesFromFirestore() {
-        viewModelScope.launch {
-            val user = FirebaseAuth.getInstance().currentUser ?: return@launch
-            val email = user.email ?: return@launch
-            FirebaseFirestore.getInstance().collection("favorites").document(email).get()
-                .addOnSuccessListener { doc ->
-                    val favList = doc.get("list")
-                    if (favList is List<*>) {
-                        val gson = com.google.gson.Gson()
-                        val json = gson.toJson(favList)
-                        val type = object : com.google.gson.reflect.TypeToken<List<Favourite>>() {}.type
-                        val favorites: List<Favourite> = gson.fromJson(json, type)
-                        viewModelScope.launch { favouriteRepository.replaceAllFavourites(favorites) }
-                    }
-                }
-        }
-    }
-
-    private var firestoreListener: ListenerRegistration? = null
-    private fun startRealtimeFavoritesSync() {
-        val user = FirebaseAuth.getInstance().currentUser ?: return
-        val email = user.email ?: return
-        firestoreListener?.remove()
-        firestoreListener = FirebaseFirestore.getInstance()
-            .collection("favorites")
-            .document(email)
-            .addSnapshotListener { doc, error ->
-                if (error != null || doc == null || !doc.exists()) return@addSnapshotListener
-                val favList = doc.get("list")
-                if (favList is List<*>) {
-                    val gson = com.google.gson.Gson()
-                    val json = gson.toJson(favList)
-                    val type = object : com.google.gson.reflect.TypeToken<List<Favourite>>() {}.type
-                    val favorites: List<Favourite> = gson.fromJson(json, type)
-                    viewModelScope.launch { favouriteRepository.replaceAllFavourites(favorites) }
-                }
-            }
     }
 
     val moveToLatLng = MutableLiveData<LatLng?>()
@@ -237,7 +189,9 @@ class MainViewModel @Inject constructor(
     var lastCameraZoom: Float? = null
     var _justMovedToFavorite: Boolean = false
 
-    init {
-        startRealtimeFavoritesSync()
+    override fun onCleared() {
+        super.onCleared()
+        // Stop listening to favourites when ViewModel is cleared
+        favouriteRepository.stopListener()
     }
 }
