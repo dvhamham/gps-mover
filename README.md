@@ -1,168 +1,134 @@
-# GPS Mover Xposed Module
+# GPS Mover
 
-**GPS Mover** is an advanced Android application and Xposed/LSPosed module that allows you to spoof your device's GPS location at the system level without requiring mock location permissions. It hooks into Android's system and Google Play Services location APIs to provide a realistic and customizable fake location experience, affecting all apps on the device.
+**GPS Mover** is an Android application that allows you to mock your device's GPS location. It provides a simple and intuitive interface to set a fake location, which can be useful for developers, testers, or anyone who wants to spoof their location for privacy or other purposes.
 
-------
+This application is built with Kotlin and utilizes the Xposed Framework to achieve reliable location spoofing. It also integrates with Firebase for remote configuration and user management.
 
-## Features
+## Key Features
 
-### XposedHook Module
+*   **Advanced GPS Mocking:**
+    *   Set a fake GPS location on your device using a foreground service for persistent mocking.
+    *   The app's stability is enhanced by an integrated Xposed module, which helps to bypass common issues with GPS spoofing.
+    *   The app checks if the Xposed module is active and notifies the user if it's not.
 
-- **GPS Location Spoofing**
-  - Spoof device GPS coordinates with realistic random drift for natural movement.
-  - Spoof altitude, bearing, speed, timestamp, and configurable location accuracy.
-  - Periodically updates location with throttling to avoid excessive updates.
-- **System-Level Location Spoofing**
-  - Hooks Android system services (`LocationManagerService`) to spoof:
-    - `getLastLocation`
-    - `requestLocationUpdates`
-    - `getCurrentLocation` (Android 13/14)
-    - `LocationCallback.onLocationResult`
-  - Works at the framework level affecting all apps using system location APIs.
-- **Google Play Services Spoofing**
-  - Hooks `FusedLocationProviderClient.getLastLocation` and `LocationCallback.onLocationResult` to inject spoofed locations.
-- **WiFi and Cellular Network Spoofing**
-  - Overrides `WifiManager.getScanResults` to return fake WiFi scan results.
-  - Spoofs telephony methods such as `getCellLocation`, `getNeighboringCellInfo`, and `getAllCellInfo`.
-- **Mock Location & Xposed Detection Bypass**
-  - Hooks `AppOpsManager.checkOp` to hide mock location usage.
-  - Hides Xposed framework presence by intercepting `ClassLoader.loadClass`.
-  - Provides internal hooks for secure module status and preferences.
-- **Dynamic Location Updates**
-  - Supports runtime location updates via a broadcast receiver (`com.hamham.gpsmover.UPDATE_LOCATION`).
-  - Shows a notification when location is updated dynamically.
-- **Blacklist Support**
-  - Excludes important system apps (e.g., Camera, WhatsApp, Play Store) from spoofing.
-- **Robustness**
-  - Exception handling and null checks prevent crashes.
-  - Uses Kotlin coroutines for asynchronous handling.
-  - Compatible with multiple Android API levels, including hidden API bypass.
-- **Logging & Debugging**
-  - Uses `Timber` for structured logging with conditional debug logs.
+*   **Interactive Map:**
+    *   Select a location by clicking on the map or by searching for an address or coordinates.
+    *   The map is powered by the Google Maps SDK and supports different map types (e.g., normal, satellite).
+    *   A "My Location" button allows you to quickly center the map on your real location.
 
-------
+*   **Favorites Management:**
+    *   Save your favorite locations with a custom name for quick access.
+    *   The favorites are stored locally in a Room database and can be reordered.
+    *   You can easily import and export your favorites to a JSON file, allowing you to back them up or share them with others.
+    *   There is also an option to import favorites from a cloud backup associated with your Google account.
 
-### GPS Mover App
+*   **Firebase Integration:**
+    *   **User Authentication:** All users must log in with a Google account, which helps to prevent misuse.
+    *   **Remote Configuration:** The app's behavior can be controlled remotely via Firebase Firestore. This includes:
+        *   A "kill switch" to disable the app.
+        *   Forced updates to ensure users are on the latest version.
+        *   The ability to send custom messages to all users.
+    *   **Device Management:** The app tracks device information (e.g., `ANDROID_ID`, device model, OS version) to manage access and prevent abuse. This includes:
+        *   The ability to ban specific devices.
+        *   The ability to send custom messages to a specific device.
 
-- **Set Fake Location:**
-   Instantly set device location to any point on the map without mock location permissions.
+*   **User Interface:**
+    *   A clean and modern UI built with Material Components.
+    *   A bottom navigation bar for easy access to the map, favorites, and settings screens.
+    *   The app uses haptic feedback to enhance the user experience.
 
-- **Favorites Management:**
+## Technologies Used
 
-  - Add,  reorder (drag & drop), and delete favorite locations.
-  - Quickly set device location by tapping favorites.
+*   **Programming Language:** [Kotlin](https://kotlinlang.org/)
+*   **Architecture:** Model-View-ViewModel (MVVM)
+*   **UI:**
+    *   [Android Jetpack](https://developer.android.com/jetpack)
+    *   [Material Components for Android](https://material.io/develop/android)
+    *   [View Binding](https://developer.android.com/topic/libraries/view-binding)
+*   **Dependency Injection:** [Hilt](https://dagger.dev/hilt/)
+*   **Asynchronous Programming:** [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html)
+*   **Database:** [Room](https://developer.android.com/training/data-storage/room)
+*   **Networking:** [Retrofit](https://square.github.io/retrofit/)
+*   **Maps:** [Google Maps SDK](https://developers.google.com/maps/documentation/android-sdk/intro)
+*   **System Modifications:** [Xposed Framework](https://repo.xposed.info/)
+*   **Backend Services:** [Firebase](https://firebase.google.com/)
+    *   [Firebase Authentication](https://firebase.google.com/docs/auth)
+    *   [Firebase Firestore](https://firebase.google.com/docs/firestore)
 
-- **Search by Coordinates:**
-   Directly search and set any latitude and longitude.
+## Installation and Setup
 
-- **Custom Accuracy:**
-   Configure reported location accuracy (e.g., 10m, 50m).
+To build and install the app, you will need:
 
-- **Randomization Mode:**
-   Send randomized locations within a user-defined radius to simulate natural movement.
+*   Android Studio
+*   An Android device or emulator with root access
+*   The Xposed Framework installed on your device
 
-- **Map Interface:**
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-username/gps-mover.git
+    ```
+2.  **Open the project in Android Studio.**
+3.  **Create a `google-services.json` file:** This file is required for Firebase integration. You will need to create a new Firebase project and add an Android app to it. Then, download the `google-services.json` file and place it in the `app/` directory.
+4.  **Set up the Maps API Key:** You will need to create a `secrets.properties` file in the root of the project with your Google Maps API key:
+    ```
+    MAPS_API_KEY="YOUR_API_KEY"
+    ```
+5.  **Build the project.**
+6.  **Run the app on your device or emulator.**
+7.  **Activate the Xposed module:**
+    *   Open the Xposed Installer app.
+    *   Go to the "Modules" section.
+    *   Enable the "GPS Mover" module.
+    *   Reboot your device.
 
-  - Google Maps integration.
-  - Tap anywhere on the map to select location.
-  - Floating action buttons for adding favorites, moving to real location, and toggling spoofing
+## Usage
 
-  ------
+### Logging In
 
-  
+The first time you open the app, you will be prompted to log in with your Google account. This is a mandatory step to use the app.
 
-  ### Favorites Synchronization
+### Setting a Location
 
-  The favorites list is fully synchronized with Firestore database in real-time.
+There are two ways to set a location:
 
-  - When a favorite location is **added**, it is immediately saved to Firestore.
-  - When a favorite is **deleted**, it is instantly removed from Firestore.
-  - Changes are automatically synced between the app and Firestore, ensuring consistency across devices and sessions.
+*   **By clicking on the map:** Simply pan and zoom to your desired location and tap on the map to place a marker.
+*   **By searching:** Use the search bar at the top of the screen to search for a location by address or by coordinates (e.g., "40.7128, -74.0060").
 
-  
+### Starting and Stopping the Mock Location
 
-- **Settings:**
+*   **To start:** Once you have placed a marker on the map, click the "Start" button (the floating action button with the play icon). A notification will appear in the status bar to indicate that the location is being mocked.
+*   **To stop:** Click the "Stop" button (the floating action button with the stop icon). The notification will be dismissed, and your device's GPS will return to its real location.
 
-  - Theme selection: Light, Dark, or System default.
-  - Map type selection: Normal, Satellite, Terrain.
-  - Enable/disable advanced system location hook.
-  - Configure randomization and accuracy settings.
+### Managing Your Favorites
 
-- **Persistent Notifications:**
-   Displays a notification when spoofing is active.
+*   **Adding a favorite:** Place a marker on the map and click the "Add to Favorites" button (the floating action button with the star icon). You will be prompted to enter a name for the favorite.
+*   **Viewing and using favorites:** Navigate to the "Favorites" screen using the bottom navigation bar. Here you will see a list of all your saved favorites. Clicking on a favorite will immediately set your location to it and take you back to the map screen.
+*   **Deleting and reordering favorites:** You can delete a favorite by swiping it to the left or right. You can also reorder your favorites by long-pressing on a favorite and then dragging it to a new position.
 
-- **Material 3 Design:**
-   Modern UI using Material You components supporting light and dark modes.
+### Importing and Exporting Favorites
 
-- **Xposed/LSPosed Integration:**
-   Detects module status and prompts if not enabled.
+From the "Favorites" screen, you can access the import/export menu from the top-right corner. This allows you to:
 
-------
+*   **Export to device:** Save all your favorites to a `gps_mover_favorites.json` file on your device.
+*   **Import from device:** Restore your favorites from a previously exported JSON file.
+*   **Import from cloud:** Restore your favorites from a cloud backup associated with your Google account.
 
-## Supported Android Versions
+## Firebase Integration
 
-- Minimum: Android 8.1 (API 27) 
-- Target/Compile: Android 14 (API 34) (tested up to Android 16)
+This application uses Firebase for several key features:
 
-------
-
-## Dependencies
-
-- Google Maps SDK
-- Material Components (Material 3)
-- AndroidX libraries (ViewModel, LiveData, Navigation, Room, etc.)
-- Hilt (Dependency Injection)
-- Timber (Logging)
-- Retrofit (Networking)
-- Xposed/LSPosed APIs
-
-------
-
-## Installation & Setup
-
-1. **Requirements:**
-   - Rooted Android device.
-   - LSPosed or Xposed framework installed and enabled.
-   - GPS Mover app installed with all necessary permissions (location, storage, notifications).
-2. **Enable Module:**
-   - Activate the GPS Mover Xposed/LSPosed module.
-   - Reboot device if needed.
-3. **Using the App:**
-   - Open the app to view the map.
-   - Use floating action buttons to add favorites, move to real location, or start/stop spoofing.
-   - Manage favorites and settings via bottom navigation.
-
-------
-
-## Controlling via ADB Broadcast Commands
-
-You can control GPS Mover remotely via ADB broadcast commands (useful for automation).
-
-**Important:** Always specify package name `-p com.hamham.gpsmover` for reliable delivery on Android 8+.
-
-| Command                | Description                  | Example                                                      |
-| ---------------------- | ---------------------------- | ------------------------------------------------------------ |
-| `gps.start`            | Start fake GPS spoofing      | `adb shell am broadcast -a gps.start -p com.hamham.gpsmover` |
-| `gps.stop`             | Stop spoofing                | `adb shell am broadcast -a gps.stop -p com.hamham.gpsmover`  |
-| `gps.set`              | Set specific location        | `adb shell am broadcast -a gps.set --es location "30.0444,31.2357" -p com.hamham.gpsmover` |
-| `gps.set` + `random`   | Set randomization radius (m) | `adb shell am broadcast -a gps.set --ei random 10 -p com.hamham.gpsmover` |
-| `gps.set` + `accuracy` | Set location accuracy (m)    | `adb shell am broadcast -a gps.set --ei accuracy 15 -p com.hamham.gpsmover` |
-
-*You can combine extras (location, random, accuracy) in a single command.*
-
-------
-
-## Developer
-
-**Mohammed Hamham**
- Email: [dv.hamham@gmail.com](mailto:dv.hamham@gmail.com)
-
-------
+*   **Firebase Authentication:** All users are required to authenticate with their Google account before using the app. This helps to prevent anonymous misuse.
+*   **Firebase Firestore:** Firestore is used for the following:
+    *   **Remote Configuration:** The app's behavior can be controlled remotely through a "Rules" document in Firestore. This includes:
+        *   `latest_version`: The latest version of the app.
+        *   `min_required_version`: The minimum required version of the app.
+        *   `update_required`: A boolean to force users to update.
+        *   `kill_switch`: A boolean to disable the app remotely.
+    *   **Device Management:** The app collects the `ANDROID_ID` of each device and stores it in a "devices" collection. This allows for:
+        *   **Banning Devices:** A device can be banned by setting the `banned` field to `true` in its document.
+        *   **Sending Custom Messages:** A custom message can be sent to a specific device by setting the `message_show` and `message` fields in its document.
+    *   **User Information:** The app stores user information, such as the device model, OS version, and last login time.
 
 ## License
 
-See the [LICENSE](https://chatgpt.com/c/LICENSE) file for license details.
-
-------
-
-If you want me to generate a ready-to-use markdown file or add sections like screenshots, usage tips, or contribution guidelines, just let me know!
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
