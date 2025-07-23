@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
@@ -14,6 +15,7 @@ import com.hamham.gpsmover.databinding.ActivityMapBinding
 import com.hamham.gpsmover.AppInitializer
 import com.hamham.gpsmover.modules.CollectionsManager
 import com.hamham.gpsmover.modules.UpdateManager
+import com.hamham.gpsmover.modules.RootManager
 import com.hamham.gpsmover.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -35,6 +37,9 @@ class MapActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Request root permissions early in the application lifecycle
+        RootManager.checkAndRequestRoot()
         
         // Configure the system window for modern edge-to-edge design
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -63,6 +68,11 @@ class MapActivity : AppCompatActivity() {
             AppInitializer.initializeAppData(this)
             // Initialize database collections and schema once only
             CollectionsManager.initializeCollections(this)
+            
+            // Check for updates after initialization
+            UpdateManager.checkUpdate(this) {
+                Log.d("MapActivity", "Update check completed in onCreate")
+            }
         } else {
             // Initialize basic collections structure even without user
             CollectionsManager.initializeCollections(this)
@@ -197,6 +207,11 @@ class MapActivity : AppCompatActivity() {
                             CollectionsManager.onUserLoginSuccess(this)
                             // Re-setup bottom navigation after login to ensure it works properly
                             setupBottomNavigation()
+                            
+                            // Check for updates after successful login
+                            UpdateManager.checkUpdate(this) {
+                                Log.d("MapActivity", "Update check completed after login")
+                            }
                         } else {
                             android.widget.Toast.makeText(this, "Authentication Failed.", android.widget.Toast.LENGTH_SHORT).show()
                         }

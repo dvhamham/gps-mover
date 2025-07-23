@@ -42,12 +42,10 @@ object AppInitializer {
             // Check comprehensive app status (killall and ban status)
             CollectionsManager.checkAppStatus(context) {
                 // If app is disabled, the method will handle shutdown
-                // Otherwise continue with update check
-                UpdateManager.checkUpdate(context) {
-                    isInitialized = true
-                    isInitializing = false
-                    onComplete?.invoke()
-                }
+                // Otherwise continue without update check (handled separately in MapActivity)
+                isInitialized = true
+                isInitializing = false
+                onComplete?.invoke()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error starting app initialization", e)

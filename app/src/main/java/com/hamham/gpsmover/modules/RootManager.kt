@@ -49,39 +49,56 @@ object RootManager {
     private const val ROOT_CHECK_COMMAND = "id"
     // Short timeout for root check to avoid UI blocking
     private const val ROOT_TEST_TIMEOUT = 1L
+    
+    // Cache for root access status to avoid repeated permission requests
+    private var cachedRootStatus: Boolean? = null
+    private var lastRootCheck: Long = 0
+    private const val ROOT_CHECK_CACHE_DURATION = 30_000L // 30 seconds
 
     /**
-     * Checks if root access is available and logs the result.
+     * Checks and requests root access, logging the result.
      * This method should be called early in the application lifecycle
      * to ensure root access is available before attempting any root operations.
      * 
      * The result is logged:
-     * - DEBUG level for successful root access
+     * - INFO level for successful root access or successful request
      * - WARN level for denied root access
      */
     fun checkAndRequestRoot() {
-        val isRooted = isRootGranted()
+        Log.i(TAG, "🔍 Checking and requesting root access...")
+        val isRooted = isRootGranted(requestIfNotAvailable = true)
         if (isRooted) {
-            Log.d(TAG, "Root access granted")
+            Log.i(TAG, "✅ Root access is available and ready")
         } else {
-            Log.w(TAG, "Root access denied")
+            Log.w(TAG, "❌ Root access not available")
         }
     }
 
     /**
      * Checks if the device has root access by attempting to execute a command with su.
-     * Uses a quick timeout to prevent hanging and implements proper resource cleanup.
+     * Uses caching to avoid repeated permission requests for silent operations.
      * 
      * Implementation details:
-     * 1. Attempts to execute 'su' command
-     * 2. Runs a simple 'id' command to verify root access
-     * 3. Uses a short timeout to quickly determine root status
-     * 4. Properly cleans up resources regardless of the outcome
+     * 1. Checks cached result first (valid for 30 seconds)
+     * 2. If not cached or expired, attempts to check root access silently
+     * 3. Only requests permissions if explicitly requested
      * 
+     * @param requestIfNotAvailable Whether to request root access if not available
      * @return true if root access is available and working, false otherwise
      */
-    fun isRootGranted(): Boolean {
+    fun isRootGranted(requestIfNotAvailable: Boolean = false): Boolean {
+        val currentTime = System.currentTimeMillis()
+        
+        // Return cached result if still valid
+        cachedRootStatus?.let { cached ->
+            if (currentTime - lastRootCheck < ROOT_CHECK_CACHE_DURATION) {
+                Log.d(TAG, "📋 Using cached root status: $cached")
+                return cached
+            }
+        }
+        
         return try {
+            Log.d(TAG, "🔍 Checking root access...")
             val process = Runtime.getRuntime().exec("su")
             
             process.outputStream.bufferedWriter().use { writer ->
@@ -90,28 +107,167 @@ object RootManager {
                 writer.flush()
             }
 
-            if (!process.waitFor(ROOT_TEST_TIMEOUT, TimeUnit.SECONDS)) {
+            val rootGranted = if (!process.waitFor(ROOT_TEST_TIMEOUT, TimeUnit.SECONDS)) {
                 process.destroy()
-                Log.w(TAG, "Root check timed out")
-                return false
+                Log.w(TAG, "⏰ Root check timed out")
+                false
+            } else {
+                val exitCode = process.exitValue()
+                exitCode == 0
             }
 
-            process.exitValue() == 0
+            // Update cache
+            cachedRootStatus = rootGranted
+            lastRootCheck = currentTime
+
+            if (rootGranted) {
+                Log.d(TAG, "✅ Root access is available")
+            } else {
+                Log.w(TAG, "❌ Root access denied or not available")
+                // Only request if explicitly asked
+                if (requestIfNotAvailable) {
+                    Log.i(TAG, "🔓 Attempting to request root access...")
+                    val requestResult = requestRootAccess()
+                    if (requestResult) {
+                        cachedRootStatus = true
+                        return true
+                    }
+                }
+            }
+            
+            rootGranted
         } catch (e: Exception) {
             when (e) {
-                is IOException -> Log.e(TAG, "Failed to execute su command", e)
-                is SecurityException -> Log.e(TAG, "Security exception while checking root", e)
-                else -> Log.e(TAG, "Unexpected error checking root access", e)
+                is IOException -> Log.e(TAG, "❌ Failed to execute su command", e)
+                is SecurityException -> Log.e(TAG, "❌ Security exception while checking root", e)
+                else -> Log.e(TAG, "❌ Unexpected error checking root access", e)
             }
+            
+            // Only request if explicitly asked and no cached positive result
+            if (requestIfNotAvailable && cachedRootStatus != true) {
+                Log.i(TAG, "🔓 Attempting to request root access after error...")
+                val requestResult = requestRootAccess()
+                if (requestResult) {
+                    cachedRootStatus = true
+                    lastRootCheck = currentTime
+                    return true
+                }
+            }
+            
+            // Cache negative result
+            cachedRootStatus = false
+            lastRootCheck = currentTime
             false
         }
+    }
+
+    /**
+     * Attempts to request root access by executing a simple su command.
+     * This will trigger the superuser permission dialog if available.
+     * Forces a permission request even if root appears unavailable.
+     * 
+     * @return true if root request was successful, false otherwise
+     */
+    private fun requestRootAccess(): Boolean {
+        return try {
+            Log.i(TAG, "🔓 Requesting root access (forcing permission dialog)...")
+            
+            // Clear any cached status to force fresh check
+            cachedRootStatus = null
+            lastRootCheck = 0
+            
+            val process = Runtime.getRuntime().exec("su")
+            
+            process.outputStream.bufferedWriter().use { writer ->
+                writer.write("echo 'GPS Mover requesting root access'\n")
+                writer.write("id\n")  // This should trigger the permission dialog
+                writer.write("exit\n")
+                writer.flush()
+            }
+
+            val requestSuccessful = if (!process.waitFor(10, TimeUnit.SECONDS)) {
+                process.destroy()
+                Log.w(TAG, "⏰ Root request timed out")
+                false
+            } else {
+                val exitCode = process.exitValue()
+                val output = try {
+                    process.inputStream.bufferedReader().use { it.readText() }.trim()
+                } catch (e: Exception) {
+                    ""
+                }
+                
+                val success = exitCode == 0 && output.isNotEmpty()
+                
+                if (success) {
+                    Log.i(TAG, "✅ Root access granted! Output: $output")
+                    // Update cache with positive result
+                    cachedRootStatus = true
+                    lastRootCheck = System.currentTimeMillis()
+                } else {
+                    Log.w(TAG, "❌ Root access request denied (exit code: $exitCode, output: '$output')")
+                    // Don't cache negative result immediately - user might grant it
+                }
+                
+                success
+            }
+            
+            requestSuccessful
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error requesting root access", e)
+            false
+        }
+    }
+
+    /**
+     * Clears the cached root status, forcing a fresh check on next call.
+     * Useful when root status might have changed (e.g., after granting/revoking permissions).
+     */
+    fun clearRootCache() {
+        Log.d(TAG, "🧹 Clearing root access cache")
+        cachedRootStatus = null
+        lastRootCheck = 0
+    }
+
+    /**
+     * Checks for root access specifically for silent installations.
+     * This method will actively request root permissions if not available,
+     * which is necessary for silent update functionality.
+     * 
+     * @return true if root access is available after potential request, false otherwise
+     */
+    fun isRootGrantedForSilentInstall(): Boolean {
+        Log.d(TAG, "🔍 Checking root access for silent installation...")
+        
+        // First check if we have cached positive result
+        val currentTime = System.currentTimeMillis()
+        cachedRootStatus?.let { cached ->
+            if (cached && (currentTime - lastRootCheck < ROOT_CHECK_CACHE_DURATION)) {
+                Log.d(TAG, "📋 Using cached positive root status for silent install")
+                return true
+            }
+        }
+        
+        // Clear cache to force fresh check
+        clearRootCache()
+        
+        // Try to get root access, requesting if needed
+        val hasRoot = isRootGranted(requestIfNotAvailable = true)
+        
+        if (hasRoot) {
+            Log.i(TAG, "✅ Root access confirmed for silent installation")
+        } else {
+            Log.w(TAG, "❌ Root access not available for silent installation")
+        }
+        
+        return hasRoot
     }
 
     /**
      * Executes a shell command with root privileges and returns the result.
      * 
      * This method handles:
-     * - Root access verification
+     * - Root access verification and request
      * - Command execution with timeout
      * - Output and error stream management
      * - Resource cleanup
@@ -134,7 +290,11 @@ object RootManager {
      */
     @Throws(TimeoutException::class, IOException::class, SecurityException::class)
     fun executeRootCommand(command: String, timeout: Long = DEFAULT_TIMEOUT): RootCommandResult {
-        if (!isRootGranted()) {
+        Log.d(TAG, "🚀 Executing root command: $command")
+        
+        // First check root silently (don't request if not available for silent operations)
+        if (!isRootGranted(requestIfNotAvailable = false)) {
+            Log.e(TAG, "❌ Root access not available for command execution")
             return RootCommandResult.Error("Root access not granted")
         }
 
@@ -159,11 +319,11 @@ object RootManager {
 
             return when {
                 exitCode == 0 -> {
-                    Log.d(TAG, "Command executed successfully: $command")
+                    Log.d(TAG, "✅ Command executed successfully: $command")
                     RootCommandResult.Success(output)
                 }
                 else -> {
-                    Log.w(TAG, "Command failed with exit code $exitCode: $command, error: $error")
+                    Log.w(TAG, "⚠️ Command failed with exit code $exitCode: $command, error: $error")
                     RootCommandResult.Error(error, exitCode)
                 }
             }
@@ -174,7 +334,7 @@ object RootManager {
                 is IOException -> throw e
                 is SecurityException -> throw e
                 else -> {
-                    Log.e(TAG, "Error executing root command: $command", e)
+                    Log.e(TAG, "❌ Error executing root command: $command", e)
                     return RootCommandResult.Error(e.message ?: "Unknown error")
                 }
             }
@@ -182,7 +342,7 @@ object RootManager {
             try {
                 process?.destroy()
             } catch (e: Exception) {
-                Log.e(TAG, "Error destroying process", e)
+                Log.e(TAG, "❌ Error destroying process", e)
             }
         }
     }
