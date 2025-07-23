@@ -1,5 +1,5 @@
-<com.hamham.gpsmover.favorites.FavoritesPage
+<com.hamham.gpsmover.feature.locations.presentation.ui.LocationsView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/favorites_page"
+    android:id="@+id/locations_view"
     android:layout_width="match_parent"
     android:layout_height="match_parent" /> 

@@ -6,14 +6,18 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.hamham.gpsmover.R
-import com.hamham.gpsmover.favorites.FavoritesPage
+import com.hamham.gpsmover.feature.locations.presentation.ui.LocationsView
+import com.hamham.gpsmover.feature.locations.presentation.viewmodel.LocationCompatibilityViewModel
 import com.hamham.gpsmover.viewmodel.MainViewModel
-import kotlinx.coroutines.MainScope
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class FavoritesFragment : Fragment() {
-    private val viewModel: MainViewModel by activityViewModels()
-    private val mainScope = MainScope()
+    private val mainViewModel: MainViewModel by activityViewModels()
+    private val locationsViewModel: LocationCompatibilityViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -25,14 +29,17 @@ class FavoritesFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val favoritesPage = view as FavoritesPage
-        favoritesPage.setViewModel(viewModel, mainScope)
-        favoritesPage.setOnFavoriteClick { favourite ->
+        val locationsView = view as LocationsView
+        
+        // Set up the new locations view with compatibility ViewModel
+        locationsView.setCompatibilityViewModel(locationsViewModel, lifecycleScope)
+        
+        locationsView.setOnLocationClick { location ->
             // Switch to map page
             requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation).selectedItemId = R.id.navigation_map
-            // Pass coordinates to ViewModel
-            viewModel.moveToLocation(favourite.lat ?: 0.0, favourite.lng ?: 0.0)
-            viewModel.update(true, favourite.lat ?: 0.0, favourite.lng ?: 0.0)
+            // Pass coordinates to main ViewModel
+            mainViewModel.moveToLocation(location.latitude, location.longitude)
+            mainViewModel.update(true, location.latitude, location.longitude)
         }
     }
 } 

@@ -11,6 +11,7 @@ import android.widget.ImageButton
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -165,14 +166,16 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMapClickListener
             if (mMarker?.isVisible != true) {
                 requireActivity().showCustomSnackbar("Location not select", SnackbarType.ERROR)
             } else {
-                val fav = com.hamham.gpsmover.favorites.Favourite(
-                    id = System.currentTimeMillis(),
+                // Use new Location model with Coordinates object
+                val location = com.hamham.gpsmover.feature.locations.domain.model.Location(
+                    id = System.currentTimeMillis().toString(),
                     name = s,
-                    lat = lat,
-                    lng = lon,
-                    order = viewModel.allFavList.value.size
+                    coordinates = com.hamham.gpsmover.feature.locations.domain.model.Coordinates(lat, lon),
+                    order = viewModel.allFavList.value.size,
+                    createdAt = System.currentTimeMillis()
                 )
-                viewModel.insertFavourite(fav)
+                // Save using new system that automatically uses coordinates object
+                viewModel.saveLocation(location)
                 dialog.dismiss()
             }
         }

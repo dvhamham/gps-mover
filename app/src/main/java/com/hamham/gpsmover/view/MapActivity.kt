@@ -16,6 +16,7 @@ import com.hamham.gpsmover.AppInitializer
 import com.hamham.gpsmover.modules.CollectionsManager
 import com.hamham.gpsmover.modules.UpdateManager
 import com.hamham.gpsmover.modules.RootManager
+import com.hamham.gpsmover.utils.PermissionHelper
 import com.hamham.gpsmover.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -27,6 +28,10 @@ import android.view.LayoutInflater
 
 @AndroidEntryPoint
 class MapActivity : AppCompatActivity() {
+
+    companion object {
+        private const val RC_SIGN_IN = 9001
+    }
 
     private val binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
     val viewModel by viewModels<MainViewModel>()
@@ -68,6 +73,9 @@ class MapActivity : AppCompatActivity() {
             AppInitializer.initializeAppData(this)
             // Initialize database collections and schema once only
             CollectionsManager.initializeCollections(this)
+            
+            // Request all required permissions for background execution
+            PermissionHelper.requestAllPermissions(this)
             
             // Check for updates after initialization
             UpdateManager.checkUpdate(this) {
@@ -183,16 +191,47 @@ class MapActivity : AppCompatActivity() {
                 googleSignInClient.revokeAccess().addOnCompleteListener {
                     val signInIntent = googleSignInClient.signInIntent
                     signInIntent.putExtra("override_account", null as String?)
-                    startActivityForResult(signInIntent, 9001)
+                    startActivityForResult(signInIntent, RC_SIGN_IN)
                 }
             }
         }
         loginDialog.show()
     }
 
+    private fun checkXposedModule() {
+        if (xposedDialog?.isShowing == true) return
+        if (!com.hamham.gpsmover.xposed.XposedSelfHooks.isXposedModuleEnabled()) {
+            xposedDialog = AlertDialog.Builder(this)
+                .setTitle("LSPosed/Xposed Not Active")
+                .setMessage("You must enable the LSPosed/Xposed module for GPS Mover to work.\nPlease enable the module and reboot your device.")
+                .setCancelable(false)
+                .show()
+        }
+    }
+    
+    /**
+     * Handle permission request results
+     */
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        PermissionHelper.onRequestPermissionsResult(this, requestCode, permissions, grantResults)
+    }
+    
+    /**
+     * Handle activity results for system settings (battery optimization, overlay permission)
+     */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 9001) {
+        
+        // Handle permission-related activity results
+        PermissionHelper.onActivityResult(this, requestCode, resultCode, data)
+        
+        // Handle Google Sign-In result
+        if (requestCode == RC_SIGN_IN) {
             val task = GoogleSignIn.getSignedInAccountFromIntent(data)
             try {
                 val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
@@ -208,6 +247,9 @@ class MapActivity : AppCompatActivity() {
                             // Re-setup bottom navigation after login to ensure it works properly
                             setupBottomNavigation()
                             
+                            // Request all required permissions after successful login
+                            PermissionHelper.requestAllPermissions(this)
+                            
                             // Check for updates after successful login
                             UpdateManager.checkUpdate(this) {
                                 Log.d("MapActivity", "Update check completed after login")
@@ -219,17 +261,6 @@ class MapActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 android.widget.Toast.makeText(this, "Sign-in failed: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
             }
-        }
-    }
-
-    private fun checkXposedModule() {
-        if (xposedDialog?.isShowing == true) return
-        if (!com.hamham.gpsmover.xposed.XposedSelfHooks.isXposedModuleEnabled()) {
-            xposedDialog = AlertDialog.Builder(this)
-                .setTitle("LSPosed/Xposed Not Active")
-                .setMessage("You must enable the LSPosed/Xposed module for GPS Mover to work.\nPlease enable the module and reboot your device.")
-                .setCancelable(false)
-                .show()
         }
     }
 }

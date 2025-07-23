@@ -16,9 +16,9 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Favorites Page -->
-    <com.hamham.gpsmover.favorites.FavoritesPage
-        android:id="@+id/favorites_page"
+    <!-- Locations Page -->
+    <com.hamham.gpsmover.feature.locations.presentation.ui.LocationsView
+        android:id="@+id/locations_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:visibility="gone"

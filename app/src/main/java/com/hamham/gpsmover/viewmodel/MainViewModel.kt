@@ -17,8 +17,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.hamham.gpsmover.BuildConfig
 import com.hamham.gpsmover.R
-import com.hamham.gpsmover.favorites.Favourite
-import com.hamham.gpsmover.favorites.FavouriteRepository
+import com.hamham.gpsmover.feature.locations.compat.Favourite
+import com.hamham.gpsmover.feature.locations.compat.FavouriteRepository
+import com.hamham.gpsmover.feature.locations.data.mapper.*
 import com.hamham.gpsmover.xposed.PrefManager
 import com.hamham.gpsmover.helpers.onMain
 import com.hamham.gpsmover.xposed.XposedSelfHooks
@@ -81,6 +82,17 @@ class MainViewModel @Inject constructor(
 
     fun insertFavourite(favourite: Favourite) {
         viewModelScope.launch {
+            favouriteRepository.addNewFavourite(context, favourite)
+        }
+    }
+
+    /**
+     * Save location using new Location model with Coordinates object
+     */
+    fun saveLocation(location: com.hamham.gpsmover.feature.locations.domain.model.Location) {
+        viewModelScope.launch {
+            // Convert to old Favourite for compatibility, but it will be saved with Coordinates
+            val favourite = location.toFavourite()
             favouriteRepository.addNewFavourite(context, favourite)
         }
     }

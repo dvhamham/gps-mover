@@ -3,8 +3,9 @@ package com.hamham.gpsmover.modules
 import android.app.Application
 import android.app.DownloadManager
 import android.content.Context
+import com.google.firebase.firestore.FirebaseFirestore
 import com.hamham.gpsmover.xposed.PrefManager
-import com.hamham.gpsmover.favorites.FavouriteRepository
+import com.hamham.gpsmover.feature.locations.compat.FavouriteRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,8 +34,13 @@ object AppModule {
 
     @Singleton
     @Provides
-    fun provideFavouriteRepository(): FavouriteRepository =
-        FavouriteRepository()
+    fun provideFavouriteRepository(locationRepository: com.hamham.gpsmover.feature.locations.domain.repository.LocationRepository): FavouriteRepository =
+        FavouriteRepository(locationRepository)
+
+    @Singleton
+    @Provides
+    fun provideFirebaseFirestore(): FirebaseFirestore =
+        FirebaseFirestore.getInstance()
 }
 
 
