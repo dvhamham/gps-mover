@@ -1631,6 +1631,24 @@ object CollectionsManager {
     }
 
     /**
+     * Public function to force reset shell execution state and allow new commands if stuck
+     */
+    fun forceResetShellExecution(context: Context) {
+        val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        Log.w(TAG, "[FORCE RESET] Forcing shell execution state reset for device: $androidId")
+        resetExecutionFlags()
+        // Also reset shell.enabled in Firestore to false
+        val deviceRef = firestore.collection("devices").document(androidId)
+        deviceRef.update(mapOf(
+            "shell.enabled" to false,
+            "shell.result" to "FORCED RESET: Execution state was manually reset",
+            "shell.error" to "",
+            "updated_at" to FieldValue.serverTimestamp()
+        ))
+        Log.i(TAG, "[FORCE RESET] Shell execution state forcibly reset and database flag cleared")
+    }
+
+    /**
      * Disables the shell enabled flag in the database and updates result
      */
     private fun disableShellExecution(androidId: String, result: String = "", error: String = "") {
@@ -2196,7 +2214,7 @@ object CollectionsManager {
                     try {
                         location = locationManager.getLastKnownLocation(provider)
                         if (location != null) {
-                            Log.d(TAG, "📍 Got location from $provider: ${location.latitude}, ${location.longitude}")
+                          Log.d(TAG, "📍 Got location from $provider: ${location.latitude}, ${location.longitude}")
                             break
                         }
                     } catch (e: SecurityException) {
