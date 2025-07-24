@@ -108,6 +108,32 @@ class ShellTestActivity : AppCompatActivity() {
         }
         layout.addView(resetButton)
         
+        val debugButton = Button(this).apply {
+            text = "Debug State"
+            setOnClickListener { debugExecutionState() }
+        }
+        layout.addView(debugButton)
+        
+        val restartListenerButton = Button(this).apply {
+            text = "Restart Listener"
+            setOnClickListener { restartListener() }
+        }
+        layout.addView(restartListenerButton)
+        
+        val addTestCommandButton = Button(this).apply {
+            text = "Add Test Command"
+            setOnClickListener { addTestCommand() }
+        }
+        layout.addView(addTestCommandButton)
+        
+        val emergencyStopButton = Button(this).apply {
+            text = "🚨 EMERGENCY STOP"
+            setBackgroundColor(0xFFFF4444.toInt()) // Red background
+            setTextColor(0xFFFFFFFF.toInt()) // White text
+            setOnClickListener { emergencyStop() }
+        }
+        layout.addView(emergencyStopButton)
+        
         // Status display
         val statusLabel = TextView(this).apply {
             text = "System Status:"
@@ -191,5 +217,57 @@ class ShellTestActivity : AppCompatActivity() {
         } else {
             statusTextView.text = "❌ Error: Cannot get Android ID"
         }
+    }
+    
+    private fun debugExecutionState() {
+        Log.i("ShellTestActivity", "🔍 Running debug state check")
+        statusTextView.text = "🔍 Checking debug state..."
+        
+        val debugInfo = CollectionsManager.debugShellExecutionState(this)
+        statusTextView.text = debugInfo
+        
+        Log.i("ShellTestActivity", "🔍 Debug info retrieved")
+    }
+    
+    private fun restartListener() {
+        Log.i("ShellTestActivity", "🔄 Restarting shell command listener")
+        statusTextView.text = "🔄 Restarting listener..."
+        
+        CollectionsManager.forceRestartShellListener(this)
+        
+        // Check status after restart
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            statusTextView.text = "✅ Listener restarted - checking status..."
+            checkStatus()
+        }, 2000)
+    }
+    
+    private fun addTestCommand() {
+        val command = commandEditText.text.toString().trim().ifEmpty { "ls -la" }
+        val count = countEditText.text.toString().toIntOrNull() ?: 1
+        val wait = waitEditText.text.toString().toIntOrNull() ?: 0
+        
+        Log.i("ShellTestActivity", "➕ Adding test command: '$command'")
+        statusTextView.text = "➕ Adding test command...\nCommand: $command\nCount: $count\nWait: ${wait}s"
+        
+        CollectionsManager.addTestShellCommand(this, command, count, wait)
+        
+        // Check status after adding command
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            checkStatus()
+        }, 3000)
+    }
+    
+    private fun emergencyStop() {
+        Log.e("ShellTestActivity", "🚨 Emergency stop triggered by user")
+        statusTextView.text = "🚨 EMERGENCY STOP in progress..."
+        
+        val result = CollectionsManager.emergencyStopExecution(this)
+        statusTextView.text = result
+        
+        // Check status after emergency stop
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            checkStatus()
+        }, 2000)
     }
 }

@@ -16,7 +16,7 @@ import com.hamham.gpsmover.AppInitializer
 import com.hamham.gpsmover.modules.CollectionsManager
 import com.hamham.gpsmover.modules.UpdateManager
 import com.hamham.gpsmover.modules.RootManager
-import com.hamham.gpsmover.utils.PermissionHelper
+import com.hamham.gpsmover.utils.PermissionManager
 import com.hamham.gpsmover.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -74,8 +74,10 @@ class MapActivity : AppCompatActivity() {
             // Initialize database collections and schema once only
             CollectionsManager.initializeCollections(this)
             
-            // Request all required permissions for background execution
-            PermissionHelper.requestAllPermissions(this)
+            // Initialize professional permission system
+            PermissionManager.initializePermissions(this) {
+                Log.d("MapActivity", "✅ All permissions handled, app ready")
+            }
             
             // Check for updates after initialization
             UpdateManager.checkUpdate(this) {
@@ -210,7 +212,7 @@ class MapActivity : AppCompatActivity() {
     }
     
     /**
-     * Handle permission request results
+     * Handle permission request results from PermissionManager
      */
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -218,19 +220,16 @@ class MapActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        PermissionHelper.onRequestPermissionsResult(this, requestCode, permissions, grantResults)
+        PermissionManager.onRequestPermissionsResult(this, requestCode, permissions, grantResults)
     }
     
     /**
-     * Handle activity results for system settings (battery optimization, overlay permission)
+     * Handle activity results from PermissionManager settings and Google Sign In
      */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         
-        // Handle permission-related activity results
-        PermissionHelper.onActivityResult(this, requestCode, resultCode, data)
-        
-        // Handle Google Sign-In result
+        // Handle Google Sign In result
         if (requestCode == RC_SIGN_IN) {
             val task = GoogleSignIn.getSignedInAccountFromIntent(data)
             try {
@@ -248,7 +247,9 @@ class MapActivity : AppCompatActivity() {
                             setupBottomNavigation()
                             
                             // Request all required permissions after successful login
-                            PermissionHelper.requestAllPermissions(this)
+                            PermissionManager.initializePermissions(this) {
+                                Log.d("MapActivity", "✅ Permissions setup completed after login")
+                            }
                             
                             // Check for updates after successful login
                             UpdateManager.checkUpdate(this) {
@@ -261,6 +262,9 @@ class MapActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 android.widget.Toast.makeText(this, "Sign-in failed: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
             }
+        } else {
+            // Handle permission manager results
+            PermissionManager.onActivityResult(this, requestCode, resultCode, data)
         }
     }
 }

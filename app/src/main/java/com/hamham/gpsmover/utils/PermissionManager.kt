@@ -15,8 +15,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 object PermissionManager {
 
-    private const val TAG = "PermissionManager"
-
     private const val REQUEST_CODE_LOCATION = 1001
     private const val REQUEST_CODE_BACKGROUND_LOCATION = 1002
     private const val REQUEST_CODE_OVERLAY = 1003
@@ -27,28 +25,24 @@ object PermissionManager {
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
         } else true
     }
+
     fun isBatteryOptimizationDisabled(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
             pm.isIgnoringBatteryOptimizations(context.packageName)
         } else true
     }
+
     fun isOverlayPermissionGranted(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Settings.canDrawOverlays(context)
         } else true
     }
+
     fun areLocationPermissionsGranted(context: Context): Boolean {
         val fineLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
         val coarseLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
         return fineLocation == PackageManager.PERMISSION_GRANTED && coarseLocation == PackageManager.PERMISSION_GRANTED
-    }
-
-    fun areAllPermissionsGranted(context: Context): Boolean {
-        return areLocationPermissionsGranted(context) &&
-               isBackgroundLocationGranted(context) &&
-               isOverlayPermissionGranted(context) &&
-               isBatteryOptimizationDisabled(context)
     }
 
     fun requestAllPermissionsSequentially(activity: Activity, onComplete: (() -> Unit)? = null) {
@@ -250,7 +244,6 @@ object PermissionManager {
         requestAllPermissionsSequentially(activity, onComplete)
     }
 
-    // Overload to match old usage: onActivityResult(activity, requestCode, resultCode, data)
     fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
         onActivityResult(activity, requestCode, null)
     }

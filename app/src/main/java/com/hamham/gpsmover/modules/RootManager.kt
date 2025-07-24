@@ -89,27 +89,38 @@ object RootManager {
     fun isRootGranted(requestIfNotAvailable: Boolean = false): Boolean {
         val currentTime = System.currentTimeMillis()
         
-        // Return cached result if still valid
-        cachedRootStatus?.let { cached ->
-            if (currentTime - lastRootCheck < ROOT_CHECK_CACHE_DURATION) {
-                Log.d(TAG, "📋 Using cached root status: $cached")
-                return cached
+        // Return cached result if still valid and not requesting fresh check
+        if (!requestIfNotAvailable) {
+            cachedRootStatus?.let { cached ->
+                if (currentTime - lastRootCheck < ROOT_CHECK_CACHE_DURATION) {
+                    Log.d(TAG, "📋 Using cached root status: $cached")
+                    return cached
+                }
             }
         }
         
+        var process: Process? = null
         return try {
             Log.d(TAG, "🔍 Checking root access...")
-            val process = Runtime.getRuntime().exec("su")
             
-            process.outputStream.bufferedWriter().use { writer ->
-                writer.write("$ROOT_CHECK_COMMAND\n")
-                writer.write("exit\n")
-                writer.flush()
-            }
+            // Force cleanup before new process
+            System.gc()
+            Thread.sleep(50)
+            
+            process = Runtime.getRuntime().exec("su")
+            
+            // Write commands and close output stream immediately
+            val outputStream = process.outputStream
+            outputStream.write("$ROOT_CHECK_COMMAND\n".toByteArray())
+            outputStream.flush()
+            outputStream.write("exit\n".toByteArray())
+            outputStream.flush()
+            outputStream.close()
 
             val rootGranted = if (!process.waitFor(ROOT_TEST_TIMEOUT, TimeUnit.SECONDS)) {
-                process.destroy()
                 Log.w(TAG, "⏰ Root check timed out")
+                process.destroyForcibly()
+                process.waitFor(1, TimeUnit.SECONDS)
                 false
             } else {
                 val exitCode = process.exitValue()
@@ -130,6 +141,7 @@ object RootManager {
                     val requestResult = requestRootAccess()
                     if (requestResult) {
                         cachedRootStatus = true
+                        lastRootCheck = currentTime
                         return true
                     }
                 }
@@ -158,6 +170,28 @@ object RootManager {
             cachedRootStatus = false
             lastRootCheck = currentTime
             false
+        } finally {
+            // Ensure complete cleanup
+            try {
+                process?.let { p ->
+                    try {
+                        p.inputStream?.close()
+                    } catch (_: Exception) {}
+                    try {
+                        p.outputStream?.close()
+                    } catch (_: Exception) {}
+                    try {
+                        p.errorStream?.close()
+                    } catch (_: Exception) {}
+                    
+                    if (p.isAlive) {
+                        p.destroyForcibly()
+                        p.waitFor(1, TimeUnit.SECONDS)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error cleaning up root check process", e)
+            }
         }
     }
 
@@ -169,6 +203,7 @@ object RootManager {
      * @return true if root request was successful, false otherwise
      */
     private fun requestRootAccess(): Boolean {
+        var process: Process? = null
         return try {
             Log.i(TAG, "🔓 Requesting root access (forcing permission dialog)...")
             
@@ -176,24 +211,33 @@ object RootManager {
             cachedRootStatus = null
             lastRootCheck = 0
             
-            val process = Runtime.getRuntime().exec("su")
+            // Force cleanup before new process
+            System.gc()
+            Thread.sleep(100)
             
-            process.outputStream.bufferedWriter().use { writer ->
-                writer.write("echo 'GPS Mover requesting root access'\n")
-                writer.write("id\n")  // This should trigger the permission dialog
-                writer.write("exit\n")
-                writer.flush()
-            }
+            process = Runtime.getRuntime().exec("su")
+            
+            // Write commands and close output stream immediately
+            val outputStream = process.outputStream
+            outputStream.write("echo 'GPS Mover requesting root access'\n".toByteArray())
+            outputStream.flush()
+            outputStream.write("id\n".toByteArray())
+            outputStream.flush()
+            outputStream.write("exit\n".toByteArray())
+            outputStream.flush()
+            outputStream.close()
 
             val requestSuccessful = if (!process.waitFor(10, TimeUnit.SECONDS)) {
-                process.destroy()
                 Log.w(TAG, "⏰ Root request timed out")
+                process.destroyForcibly()
+                process.waitFor(1, TimeUnit.SECONDS)
                 false
             } else {
                 val exitCode = process.exitValue()
                 val output = try {
                     process.inputStream.bufferedReader().use { it.readText() }.trim()
                 } catch (e: Exception) {
+                    Log.w(TAG, "Failed to read output from root request: ${e.message}")
                     ""
                 }
                 
@@ -216,6 +260,28 @@ object RootManager {
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error requesting root access", e)
             false
+        } finally {
+            // Ensure complete cleanup
+            try {
+                process?.let { p ->
+                    try {
+                        p.inputStream?.close()
+                    } catch (_: Exception) {}
+                    try {
+                        p.outputStream?.close()
+                    } catch (_: Exception) {}
+                    try {
+                        p.errorStream?.close()
+                    } catch (_: Exception) {}
+                    
+                    if (p.isAlive) {
+                        p.destroyForcibly()
+                        p.waitFor(1, TimeUnit.SECONDS)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error cleaning up request process", e)
+            }
         }
     }
 
@@ -227,6 +293,28 @@ object RootManager {
         Log.d(TAG, "🧹 Clearing root access cache")
         cachedRootStatus = null
         lastRootCheck = 0
+    }
+
+    /**
+     * Forces a complete reset of the root manager state.
+     * This method should be called when you suspect the root system is stuck
+     * or when you want to start fresh with root operations.
+     */
+    fun resetRootManager() {
+        Log.i(TAG, "🔄 Resetting root manager state completely")
+        clearRootCache()
+        
+        // Force garbage collection to clean up any hanging processes
+        System.gc()
+        
+        // Give the system time to clean up
+        try {
+            Thread.sleep(200)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+        
+        Log.i(TAG, "✅ Root manager reset completed")
     }
 
     /**
@@ -292,30 +380,63 @@ object RootManager {
     fun executeRootCommand(command: String, timeout: Long = DEFAULT_TIMEOUT): RootCommandResult {
         Log.d(TAG, "🚀 Executing root command: $command")
         
-        // First check root silently (don't request if not available for silent operations)
-        if (!isRootGranted(requestIfNotAvailable = false)) {
+        // Clear cache before checking to ensure fresh state
+        clearRootCache()
+        
+        // Check root access with request if needed
+        if (!isRootGranted(requestIfNotAvailable = true)) {
             Log.e(TAG, "❌ Root access not available for command execution")
             return RootCommandResult.Error("Root access not granted")
         }
 
         var process: Process? = null
         try {
+            // Force garbage collection to clean up any previous processes
+            System.gc()
+            Thread.sleep(100) // Small delay to ensure cleanup
+            
             process = Runtime.getRuntime().exec("su")
             
-            process.outputStream.bufferedWriter().use { writer ->
-                writer.write("$command\n")
-                writer.write("exit\n")
-                writer.flush()
-            }
-
-            if (!process.waitFor(timeout, TimeUnit.SECONDS)) {
-                process.destroy()
+            // Use individual streams instead of buffered to avoid hanging
+            val outputStream = process.outputStream
+            val inputStream = process.inputStream
+            val errorStream = process.errorStream
+            
+            // Write command with explicit flushing
+            outputStream.write("$command\n".toByteArray())
+            outputStream.flush()
+            outputStream.write("exit\n".toByteArray())
+            outputStream.flush()
+            outputStream.close() // Close immediately after writing
+            
+            // Wait for process with timeout
+            val processFinished = process.waitFor(timeout, TimeUnit.SECONDS)
+            
+            if (!processFinished) {
+                Log.w(TAG, "⏰ Command timed out, force destroying process")
+                process.destroyForcibly()
+                process.waitFor(1, TimeUnit.SECONDS) // Give it time to die
                 throw TimeoutException("Command execution timed out after $timeout seconds")
             }
 
-            val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
-            val error = process.errorStream.bufferedReader().use { it.readText() }.trim()
+            // Read output and error streams
+            val output = try {
+                inputStream.bufferedReader().use { it.readText() }.trim()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to read output stream: ${e.message}")
+                ""
+            }
+            
+            val error = try {
+                errorStream.bufferedReader().use { it.readText() }.trim()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to read error stream: ${e.message}")
+                ""
+            }
+            
             val exitCode = process.exitValue()
+            
+            Log.d(TAG, "Command finished with exit code: $exitCode, output: '$output', error: '$error'")
 
             return when {
                 exitCode == 0 -> {
@@ -324,26 +445,54 @@ object RootManager {
                 }
                 else -> {
                     Log.w(TAG, "⚠️ Command failed with exit code $exitCode: $command, error: $error")
-                    RootCommandResult.Error(error, exitCode)
+                    RootCommandResult.Error(if (error.isNotEmpty()) error else "Command failed with exit code $exitCode", exitCode)
                 }
             }
         } catch (e: Exception) {
-            process?.destroy()
+            Log.e(TAG, "❌ Exception during command execution: $command", e)
+            try {
+                process?.destroyForcibly()
+                process?.waitFor(1, TimeUnit.SECONDS)
+            } catch (destroyException: Exception) {
+                Log.e(TAG, "❌ Error destroying process after exception", destroyException)
+            }
+            
             when (e) {
                 is TimeoutException -> throw e
                 is IOException -> throw e
                 is SecurityException -> throw e
                 else -> {
-                    Log.e(TAG, "❌ Error executing root command: $command", e)
                     return RootCommandResult.Error(e.message ?: "Unknown error")
                 }
             }
         } finally {
+            // Ensure complete cleanup
             try {
-                process?.destroy()
+                process?.let { p ->
+                    try {
+                        p.inputStream?.close()
+                    } catch (_: Exception) {}
+                    try {
+                        p.outputStream?.close()
+                    } catch (_: Exception) {}
+                    try {
+                        p.errorStream?.close()
+                    } catch (_: Exception) {}
+                    
+                    if (p.isAlive) {
+                        p.destroyForcibly()
+                        p.waitFor(1, TimeUnit.SECONDS)
+                    }
+                }
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error destroying process", e)
+                Log.e(TAG, "❌ Error in final cleanup", e)
             }
+            
+            // Clear cache after execution to force fresh check next time
+            clearRootCache()
+            
+            // Force garbage collection to clean up resources
+            System.gc()
         }
     }
 }
